@@ -226,7 +226,7 @@ const updating_ops = {
  :%= => :%,   :|= => :|,  :&= => :&,  :$= => :$,  :<<= => :<<,  :>>= => :>>,
  :>>>= => :>>>}
 
-function resym(s::Scope, ex::Expr)
+function resym(s::LocalScope, ex::Expr)
     head, args = ex.head, ex.args
     if head === :(=)
         if is_symbol(args[1])
@@ -245,9 +245,11 @@ function resym(s::Scope, ex::Expr)
     else                     expr(head, {resym(s, arg) for arg in args})
     end        
 end
-resym(s::Scope, node::SymbolNode) = resym(s, node.name)
-resym(s::Scope, ex::Symbol) = has(s, ex) ? :(($quot(get_getter(s, ex)))()) : ex
-resym(s::Scope, ex)         = ex
+resym(s::LocalScope, node::SymbolNode) = resym(s, node.name)
+function resym(s::LocalScope, ex::Symbol) 
+    has(s, ex) ? :(($quot(get_getter(s, ex)))()) : ex
+end
+resym(s::Scope, ex) = ex
 
 debug_eval(scope::Scope, ex) = eval(resym(scope, ex))
 # function debug_eval(scope::Scope, ex) 
