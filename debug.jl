@@ -72,7 +72,7 @@ function getdefs(c::DefinedSyms, ex::Expr)
         return
     end
 
-    if contains([:function, :for, :while], head)
+    if contains([:function, :for, :while, :(->)], head)
         c = enter(c, ex)
     end
     if head === :(=)
