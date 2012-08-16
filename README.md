@@ -50,10 +50,10 @@ Current implementation and limitations
 
  * `@debug` first tries to gather the set of symbols that is defined within
    each scope in the instrumented code.   
-   I've tried to encode the scoping rules of Julia, but I might very well 
-   have missed something.   
-   `@debug` should be used at global scope, or it might fail to capture some 
-   variables that are visible to the instrumented code.
+   I've tried to encode the scoping rules of Julia, but it's not complete.
+   `@debug` will complain unless it's applied at global scope, 
+   since it might fail to capture some variables that are visible to the 
+   instrumented code otherwise.
 
  * Secondly, `@debug` instruments the code by inserting a call to `debug_hook`
    before each expression within a `:block` expr in the AST (i e in most block
@@ -65,8 +65,7 @@ Current implementation and limitations
  * `debug_eval(scope, ex)` attempts to translate `ex` to replace reads from and
    writes to variables to use getters and setters from `scope` 
    where appropriate. 
-   I've tried to encode Julia's assignment rules, but there could be 
-   glitches.
+   I've tried to encode Julia's assignment rules, but it's not complete.
    Assignment to symbols that are not found in `scope` is prohibited,
    rather than setting a global (without a corresponding `global` declaration 
    in the code).
@@ -76,6 +75,9 @@ Current implementation and limitations
    and then into e g `x_setter(x_getter()+1)`.
 
 Further limitations:
- * No support for code that runs directly in a global scope.
+ * No scoping analysis is done for the expression that is passed `debug_eval` yet
  * Not much tested yet.
  * No actual interactive debug hook.
+ * Things I don't know about yet...
+Also see the [issues](https://github.com/toivoh/julia-debugger/issues)
+section for some limitations that I do know about.
