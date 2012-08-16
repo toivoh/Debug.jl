@@ -38,6 +38,8 @@ function enter(scopes::ObjectIdDict, ex)
     DefinedSyms(scopes, syms)
 end
 
+const comprehensions = [:comprehension, symbol("cell-comprehension")]
+
 getdefs(c::DefinedSyms, exs::Vector) = (for ex in exs; getdefs(c, ex); end)
 function getdefs(c::DefinedSyms, ex::Expr)
     head = ex.head
@@ -59,6 +61,13 @@ function getdefs(c::DefinedSyms, ex::Expr)
             c.scopes[lhs] = c_inner.syms
         end
         return
+    end
+    if contains(comprehensions, head)
+        c = enter(c, args[1])
+        getdefs(c, args)
+        for arg in args[2:end]
+            c.scopes[arg] = c.syms
+        end
     end
     if head === :try
         try_body, catch_arg, catch_body = args[1], args[2], args[3]
@@ -201,7 +210,7 @@ function code_debug(c::CodeDebug, ex::Expr)
         end
         return expr(ex.head, args)
     end
-    
+
     return expr(ex.head, code_debug(c, ex.args))
 end
 code_debug(c::CodeDebug, ex) = ex

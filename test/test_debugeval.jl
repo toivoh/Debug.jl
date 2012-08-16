@@ -20,12 +20,13 @@ import Debug.*
     catch e                        #20
         x                          #21
     end                            #22
-    g = x->begin                   #23
-        x = -1                     #24
-        x                          #25
-    end                            #26
-    g(n)                           #27
-    x                              #28
+    [begin x^2 end for x=1:3]      #23
+    g = x->begin                   #24
+        x = -1                     #25
+        x                          #26
+    end                            #27
+    g(n)                           #28
+    x                              #29
 end
 
 function debug_hook(line::Int, file, scope::Scope) 
@@ -37,7 +38,7 @@ function debug_hook(line::Int, file, scope::Scope)
     if (line == 12) debug_eval(scope, :(print("\tk = ", k))) end
     if (line == 16) debug_eval(scope, :(print("\ty = ", y))) end
     if (line == 21) debug_eval(scope, :(print("\te = ", e))) end
-    if (line >  23) debug_eval(scope, :(print("\tg = ", g))) end
+    if (line >  24) debug_eval(scope, :(print("\tg = ", g))) end
     println()
 end
 
