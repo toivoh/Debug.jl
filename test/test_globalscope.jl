@@ -10,19 +10,19 @@ function debug_hook(line::Int, file, scope::Scope)
     if line < 30
         if (line >  20) debug_eval(scope, :( print("\tx = ", x) )) end
         if (line >  21) debug_eval(scope, :( print("\ty = ", y) )) end
-
-        if (line == 21) debug_eval(scope, :( x = 7; y = 8       )) end
+        if (line >  20) debug_eval(scope, :( print("\tz = ", z) )) end
+        if (line == 21) debug_eval(scope, :( (x,y,z) = (7,8,9)  )) end
     end
     println()
 end
 
 @debug begin
-    x = 1  # line 20
-    y = 2  #      21
-    x      #      22
+    x, z = 1, 2  # line 20
+    y = 2        #      21
+    x            #      22
 end
 
-println("(x, y) = ", (x, y)) 
+println("(x, y, z) = ", (x, y, z)) 
 
 
 try

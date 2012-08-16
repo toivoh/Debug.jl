@@ -255,13 +255,19 @@ function resym(s::LocalScope, ex::Expr)
             setter = get_setter(s, lhs)
             rhs = resym(s, args[2])
             expr(:call, quot(setter), rhs)
+        elseif is_expr(args[1], :tuple)
+            tup = esc(gensym("tuple"))
+            resym(s, expr(:block, :( ($tup) = ($args[2])                ),
+                                 {:( ($dest) = ($tupleref)(($tup),($k)) ) for 
+                                     (dest,k)=enumerate(args[1].args)}...))
         else
             expr(head, {resym(s, arg) for arg in args})
         end
     elseif has(updating_ops, head) # Translate updating ops, e g x+=1 ==> x=x+1
         op = updating_ops[head]
         resym(s, :( ($args[1]) = ($op)(($args[1]), ($args[2])) ))
-    elseif (head === :quote) ex
+    elseif (head === :quote)  ex
+    elseif (head === :escape) ex.args[1]  # bypasses substitution
     else                     expr(head, {resym(s, arg) for arg in args})
     end        
 end
