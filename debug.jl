@@ -84,7 +84,7 @@ function getdefs(c::DefinedSyms, ex::Expr)
     if contains([:function, :for, :while, :(->)], head)
         c = enter(c, ex)
     end
-    if head === :(=)
+    if head === :(=) || head === :(->)
         getdefs_lhs(c, args[1])
         getdefs(c, args[2])
     elseif contains([:local, :global], head)
