@@ -75,10 +75,10 @@ Current implementation and limitations
    and then into e g `x_setter(x_getter()+1)`.
 
 Further limitations:
- * No scoping analysis is done for the expression that is passed to `debug_eval` yet
+ * No scoping analysis is done for the expression that is passed to `debug_eval` yet.
  * Not much tested.
  * No actual interactive debug hook.
  * Things I don't know about yet...
 
 Also see the [issues](https://github.com/toivoh/julia-debugger/issues)
-section for some limitations that I do know about.
+section for current known limitations.
