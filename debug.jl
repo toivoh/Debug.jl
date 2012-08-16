@@ -214,7 +214,21 @@ end
 debug_hook(line::Int, scope::Scope) = nothing
 
 macro debug(ex)
-    esc(code_debug(ex))
+    @gensym globalvar check
+    esc(quote
+        ($globalvar) = ($quot(true))
+        if !eval($quot(quote
+            try
+                global ($globalvar)
+                ($globalvar)
+            catch e
+                ($quot(false))
+            end
+        end))
+            ($quot(error))("@debug: must be applied in global scope!")
+        end
+        ($code_debug(ex))
+    end)
 end
 
 
