@@ -107,7 +107,7 @@ function getdefs_lhs(c::DefinedSyms, ex::Expr)
     if head === doublecolon && nargs == 2
         getdefs_lhs(c, args[1])
         getdefs(c, args[2])
-    elseif head === :call
+    elseif contains([:call, :tuple], head)
         getdefs_lhs(c, args)        
     elseif head === :ref
         getdefs(c, args)
