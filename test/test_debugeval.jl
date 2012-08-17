@@ -5,7 +5,13 @@ module TestDebugEval
 import Base.*
 import Debug.*
 
-const f_line = 9 # line number of the next line:
+macro assign(lhs, rhs)
+    esc(quote
+        ($lhs) = ($rhs)   # f_line - 5
+    end)
+end
+
+const f_line = 15 # line number of the next line:
 @debug function f(n) # this must be line number f_line
     x = 0     # line number f_line + 1
     for k=1:n                      # 2
@@ -27,7 +33,8 @@ const f_line = 9 # line number of the next line:
         x                          #18
     end                            #19
     g(n, n)                        #20
-    x                              #21
+    @assign w x/2                  #21
+    x                              #22    
 end
 
 function debug_hook(line::Int, file, scope::Scope)
@@ -36,13 +43,14 @@ function debug_hook(line::Int, file, scope::Scope)
 
     if (line ==  2) debug_eval(scope, :(x += 1)) end
 
-    if (line >   1) debug_eval(scope, :(print("\tx = ", x))) end
+    if (line !=  1) debug_eval(scope, :(print("\tx = ", x))) end
     if (line ==  3) debug_eval(scope, :(print("\tk = ", k))) end
     if (line ==  7) debug_eval(scope, :(print("\ty = ", y))) end
     if (line == 12) debug_eval(scope, :(print("\te = ", e))) end
     if (line >  15) debug_eval(scope, :(print("\tg = ", g))) end
     if (16 <= line <= 18) debug_eval(scope, :(print("\ty = ", y))) end
     if (line == 18) debug_eval(scope, :(print("\ta = ", a, "\tb = ", b, ))) end
+#    if (line >  21) debug_eval(scope, :(print("\tw = ", w))) end
     println()
 end
 

@@ -24,6 +24,17 @@ is_linenumber(ex)                 = false
 get_linenumber(ex::Expr)           = ex.args[1]
 get_linenumber(ex::LineNumberNode) = ex.line
 
+# ---- macro_expand -----------------------------------------------------------
+
+# expand() seems to do a number of things, including macro expansion.
+# macro_expand() should confine it to macros.
+function macro_expand(ex::Expr)
+    if ex.head === :macrocall;                 return expand(ex); end
+    if ex.head === :quote || ex.head === :top; return ex;         end
+    expr(ex.head, {macro_expand(arg) for arg in ex.args})
+end
+macro_expand(ex) = ex
+
 
 # ---- getdefs: gather defined symbols by scope -------------------------------
 
@@ -45,7 +56,8 @@ function getdefs(c::DefinedSyms, ex::Expr)
     head = ex.head
     args = ex.args
 
-    if contains([:line, :quote, :type], head) return end
+    if contains([:line, :quote, :top, :type], head); return; end
+    if head === :macrocall; return; end  # don't go in there for now
     if head === :let
         body = args[1]
         c_outer, c_inner = c, enter(c, body)
@@ -183,10 +195,13 @@ end
 
 code_debug(c::CodeDebug, exs::Vector) = {code_debug(c, ex) for ex in exs}
 function code_debug(c::CodeDebug, ex::Expr)
+    if contains([:line, :quote, :top, :type], ex.head); return ex; end
+    if ex.head === :macrocall; return ex; end  # don't go in there for now
+
     scopes = c.shared.scopes
     if has(scopes, ex); c = enter(c, ex); end
 
-    if ex.head === :block
+    if ex.head === :block || ex.head === :body
         args = {}
         if !isempty(c.syms)
             # emit Scope object
@@ -216,6 +231,8 @@ end
 code_debug(c::CodeDebug, ex) = ex
 
 function code_debug(ex) 
+#    ex = macro_expand(ex)
+    println("ex =\n", ex)
     code_debug(CodeDebug(DbgShared(getdefs(ex)), quot(NoScope())), ex)
 end
 
@@ -266,8 +283,8 @@ function resym(s::LocalScope, ex::Expr)
     elseif has(updating_ops, head) # Translate updating ops, e g x+=1 ==> x=x+1
         op = updating_ops[head]
         resym(s, :( ($args[1]) = ($op)(($args[1]), ($args[2])) ))
-    elseif (head === :quote)  ex
-    elseif (head === :escape) ex.args[1]  # bypasses substitution
+    elseif head === :quote || head === :top; ex
+    elseif head === :escape; ex.args[1]  # bypasses substitution
     else                     expr(head, {resym(s, arg) for arg in args})
     end        
 end
