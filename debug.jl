@@ -24,18 +24,6 @@ is_linenumber(ex)                 = false
 get_linenumber(ex::Expr)           = ex.args[1]
 get_linenumber(ex::LineNumberNode) = ex.line
 
-# ---- macro_expand -----------------------------------------------------------
-
-# expand() seems to do a number of things, including macro expansion.
-# macro_expand() should confine it to macros.
-function macro_expand(ex::Expr)
-    if ex.head === :macrocall;                 return expand(ex); end
-    if ex.head === :quote || ex.head === :top; return ex;         end
-    expr(ex.head, {macro_expand(arg) for arg in ex.args})
-end
-macro_expand(ex) = ex
-
-
 # ---- getdefs: gather defined symbols by scope -------------------------------
 
 type DefinedSyms
@@ -231,7 +219,6 @@ end
 code_debug(c::CodeDebug, ex) = ex
 
 function code_debug(ex) 
-#    ex = macro_expand(ex)
     println("ex =\n", ex)
     code_debug(CodeDebug(DbgShared(getdefs(ex)), quot(NoScope())), ex)
 end
