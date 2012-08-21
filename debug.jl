@@ -26,6 +26,121 @@ get_linenumber(ex::LineNumberNode) = ex.line
 
 # ---- getdefs: gather defined symbols by scope -------------------------------
 
+module Scoping
+
+type Scope
+    parent::Union(Scope, Nothing)
+    bindings::Set{Symbol}
+
+    Scope(parent) = new(parent, Set{Symbol}())
+end
+
+type Context
+    scopes::ObjectIdDict  # node -> Scope
+    s::Scope   # current scope
+end
+child(c::Context) = Context(c.scopes, Scope(c.s))
+
+abstract State
+type Rhs <: State; end
+type Lhs <: State; end
+type Arg <: State; end
+
+const RHS = Rhs()
+const LHS = Lhs()
+const ARG = Arg()
+
+function getdefs(c::Context, ex, state::State)
+    if has(c.scopes, ex); scope = c.scopes[ex]
+    else                  c.scopes[ex] = scope = c.s
+    end
+    scope_ex(Context(c.scopes, scope), ex, state)
+end
+function getdefs(c::Context, exs::Vector, state::State)
+    for ex in exs; getdefs(c, ex, state); end
+end
+getdefs(c::Context, ex) = getdefs(c, ex, RHS)
+
+
+const comprehensions = [:comprehension, symbol("cell-comprehension")]
+
+function getdefs_method(c::Context, sig::Expr, body)
+    @assert is_expr(sig, :call)
+    getdefs(c, sig.args[1], LHS)
+    c = child(c)
+    getdefs(c, sig.args[2:end], LHS)
+    getdefs(c, body)
+end
+
+function scope_ex(c::Context, ex::Expr, ::Rhs)
+    head, args = ex.head, ex.args
+
+    if contains([:line, :quote, :top, :type], head); return; end
+    if head === :macrocall; return; end  # don't go in there for now
+    
+    if head === :let
+        inner = child(c)
+        getdefs(inner, args[1])
+        for arg in args[2:end]
+            c.scopes[is_expr(arg, :(=)) ? arg.args[1] : arg] = inner
+            getdefs(c, arg, ARG)
+        end
+    elseif contains(comprehensions, head)
+        getdefs(child(c), args)
+    elseif head === :try
+        try_body, catch_arg, catch_body = args...
+        getdefs(child(c), try_body)
+        c = child(c)
+        getdefs(c, catch_arg, LHS)
+        getdefs(c, catch_body)
+    elseif head === :function
+        getdefs_method(c, args...)
+    elseif head === :(->)
+        c = child(c)
+        getdefs(c, args[1], LHS)
+        getdefs(c, args[2])
+    elseif head === :(=)
+        if is_expr(args[1], :call)
+            getdefs_method(c, args...)            
+        else
+            getdefs(c, args[1], LHS)
+            getdefs(c, args[2])
+        end
+    elseif head === :local || head === :global
+        getdefs(c, args, ARG)
+    else        
+        if head === :for || head === while; c = child(c); end
+        getdefs(c, args)
+    end
+end
+function scope_ex(c::Context, ex, ::Lhs)
+    head, args, nargs = ex.head, ex.args, length(ex.args)
+    
+    if head === doublecolon && nargs == 2
+        getdefs(c, args[1], LHS)
+        getdefs(c, args[2])
+    elseif head === doublecolon && nargs == 1
+        getdefs(c, args[1])        
+#    elseif contains([:call, :tuple], head)
+    elseif head === :tuple
+        getdefs(c, args, LHS)        
+    elseif head === :ref
+        getdefs(c, args)
+    else
+        error("getdefs (LHS): don't know how to handle head=$head")
+    end    
+end
+scope_ex(c::Context, ex, ::Arg) = scope_ex(c, ex, is_expr(ex,:(=)) ? RHS : LHS)
+
+function getdefs(ex::Expr)
+    scopes = ObjectIdDict()
+    getdefs(enter(scopes, ex), ex)
+    scopes
+end
+
+end # module Scoping
+
+
 type DefinedSyms
     scopes::ObjectIdDict
     syms::Set{Symbol}
