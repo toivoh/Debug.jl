@@ -1,7 +1,7 @@
 
 module Debug
 using Base
-export instrument, trap, translate, argstates, LHS, RHS, DEF
+export instrument, trap, translate, argpositions, LHS, RHS, DEF
 
 macro show(ex)
     quote
@@ -30,14 +30,68 @@ get_linenumber(ex::LineNumberNode) = ex.line
 
 # ----- Analysis --------------------------------------------------------------
 
-typealias State Symbol
+typealias Position Symbol
 const DEF = :def
 const LHS = :lhs
 const RHS = :rhs
 
+const doublecolon = symbol("::")
+const typed_comprehension = symbol("typed-comprehension")
+const comprehensions = [:comprehension, typed_comprehension]
+
+# ---- argpositions: give the Position of each node arg -----------------------
+
+argpositions(ex::Expr) = argpositions(ex, RHS)
+argpositions(ex::Expr, pos::Position) = argpositions(ex.head, ex.args, pos)
+
+function argpositions(head::Symbol, args::Vector, pos::Position)
+    nargs = length(args)
+    positions = argpositions(head, nargs, pos)
+    npos = length(positions)
+
+    if     nargs < npos; error("Too few args for $head")
+    elseif nargs > npos; [positions, fill(positions[end], nargs-npos)]
+    else positions
+    end    
+end
+
+function argpositions(head::Symbol, nargs::Int, pos::Position)
+    @assert contains([RHS,LHS,DEF], pos)
+    if pos == RHS
+        if     head === :(=);  [LHS, RHS]
+        elseif head === :for;  [DEF, RHS]
+        elseif head === :let;  [RHS, DEF]
+        elseif head === :try;  [RHS, DEF, RHS]
+
+        elseif contains([:global, :local], head); [DEF]
+        elseif head === :comprehension;           [RHS, DEF]
+        elseif head === typed_comprehension;      [RHS, RHS, DEF]
+
+        elseif head === :abstract;  [DEF]
+        elseif head === :type;      [DEF, DEF]
+        elseif head === :typealias; [DEF, RHS]
+        elseif head === :function;  [DEF, RHS]
+        elseif head === :(->);      [DEF, RHS]
+
+        else [RHS]
+        end
+    else
+        if     head === doublecolon; nargs == 2 ? [pos, RHS] : [RHS]
+        elseif head === :tuple; [pos]
+        elseif head === :call;  [LHS, DEF]
+        elseif head === :ref;   [RHS]
+        else
+            error("Don't know how to handle $head in pos $pos")
+        end        
+    end
+end
+
+
+
+
 
 type NodeData
-    state::State
+    pos::Position
     NodeData() = new()
 end
 
@@ -64,104 +118,55 @@ end
 translate(ex) = LeafNode(ex)
 
 
-mark_state!(nodes, s::State) = (for node in nodes; mark_state!(node, s); end)
-function mark_state!(node::Node, state::State)
-    node.state = state
-    mark_args_state!(node, state)
+mark_pos!(nodes, s::Position) = (for node in nodes; mark_pos!(node, s); end)
+function mark_pos!(node::Node, pos::Position)
+    node.pos = pos
+    mark_args_pos!(node, pos)
 end
 
-const doublecolon = symbol("::")
-const typed_comprehension = symbol("typed-comprehension")
-const comprehensions = [:comprehension, typed_comprehension]
-
-argstates(ex::Expr) = argstates(ex, RHS)
-argstates(ex::Expr, state::State) = argstates(ex.head, ex.args, state)
-
-function argstates(head::Symbol, args::Vector, state::State)
-    nargs = length(args)
-    states = argstates(head, nargs, state)
-    nstates = length(states)
-
-    if     nargs < nstates; error("Too few args for $head")
-    elseif nargs > nstates; [states, fill(states[end], nargs-nstates)]
-    else states
-    end    
-end
-
-function argstates(head::Symbol, nargs::Int, state::State)
-    @assert contains([RHS,LHS,DEF], state)
-    if state == RHS
-        if     head === :(=);  [LHS, RHS]
-        elseif head === :for;  [DEF, RHS]
-        elseif head === :let;  [RHS, DEF]
-        elseif head === :try;  [RHS, DEF, RHS]
-
-        elseif contains([:global, :local], head); [DEF]
-        elseif head === :comprehension;           [RHS, DEF]
-        elseif head === typed_comprehension;      [RHS, RHS, DEF]
-
-        elseif head === :abstract;  [DEF]
-        elseif head === :type;      [DEF, DEF]
-        elseif head === :typealias; [DEF, RHS]
-        elseif head === :function;  [DEF, RHS]
-        elseif head === :(->);      [DEF, RHS]
-
-        else [RHS]
-        end
-    else
-        if     head === doublecolon; nargs == 2 ? [state, RHS] : [RHS]
-        elseif head === :tuple; [state]
-        elseif head === :call;  [LHS, DEF]
-        elseif head === :ref;   [RHS]
-        else
-            error("Don't know how to handle $head in state $state")
-        end        
-    end
-end
-
-mark_args_state!(::LeafNode, ::State) = nothing
-function mark_args_state!(node::INode, state::State)
+mark_args_pos!(::LeafNode, ::Position) = nothing
+function mark_args_pos!(node::INode, pos::Position)
     head, args = node.head, node.args
-    if state == RHS
+    if pos == RHS
         if head === :(=)
-            mark_state!(args[1], LHS)
-            mark_state!(args[2], RHS)
+            mark_pos!(args[1], LHS)
+            mark_pos!(args[2], RHS)
         elseif contains([:global, :local], head)
-            mark_state!(args, DEF)
+            mark_pos!(args, DEF)
         elseif contains([:function, :for, :(->)], head)
-            mark_state!(args[1], DEF)
-            mark_state!(args[2], RHS)
+            mark_pos!(args[1], DEF)
+            mark_pos!(args[2], RHS)
         elseif head === :let
-            mark_state!(args[2:end], DEF)
-            mark_state!(args[1], RHS)
+            mark_pos!(args[2:end], DEF)
+            mark_pos!(args[1], RHS)
         elseif head == :try
-            mark_state!(args[[1,3]], RHS)
-            mark_state!(args[2], DEF)
+            mark_pos!(args[[1,3]], RHS)
+            mark_pos!(args[2], DEF)
         elseif contains([:abstract, :type, :typealias], head)
-            mark_state!(args[1], DEF)
+            mark_pos!(args[1], DEF)
         elseif contains(comprehensions, head)
             if head === typed_comprehension
-                mark_state!(args[1], RHS)
+                mark_pos!(args[1], RHS)
                 args = args[2:end]
             end
-            mark_state!(args[1], RHS)
-            mark_state!(args[2:end], DEF)
+            mark_pos!(args[1], RHS)
+            mark_pos!(args[2:end], DEF)
         else
-            mark_state!(args, RHS)
+            mark_pos!(args, RHS)
         end
-    elseif contains([LHS, DEF], state)
+    elseif contains([LHS, DEF], pos)
         if head === doublecolon
-            mark_state!(args[1], state)
-            mark_state!(args[2], RHS)
+            mark_pos!(args[1], pos)
+            mark_pos!(args[2], RHS)
         elseif head === :tuple
-            mark_state!(args, state)
+            mark_pos!(args, pos)
         elseif head === :call
-            mark_state!(args[1], LHS)
-            mark_state!(args[2:end], DEF)            
+            mark_pos!(args[1], LHS)
+            mark_pos!(args[2:end], DEF)            
         elseif head === :ref
-            mark_state!(args, RHS)
+            mark_pos!(args, RHS)
         else
-            error("Don't know how to handle $node in state $state")
+            error("Don't know how to handle $node in pos $pos")
         end
     else
         error()

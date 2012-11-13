@@ -14,7 +14,7 @@ end
 #translated = translate(code)
 #println(translated)
 
-println(argstates(:(for i=5;end)))
-println(argstates(:{x for x=1:5,y=1:3}))
+println(argpositions(:(for i=5;end)))
+println(argpositions(:{x for x=1:5,y=1:3}))
 
 end
