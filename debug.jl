@@ -30,6 +30,35 @@ get_linenumber(ex::LineNumberNode) = ex.line
 
 # ----- Analysis --------------------------------------------------------------
 
+abstract Head
+type Exp <: Head
+    head::Symbol
+end
+toast(head::Exp, args) = expr(head.head, args...)
+
+type Leaf <: Head
+    value
+end
+toast(head::Leaf, args) = (@assert length(args)==0; head.value)
+
+type Node{T<:Head}
+    head::T
+    args::Vector{Node}
+end
+Node{T<:Head}(head::T)       = Node{T}(head, Node[])
+Node{T<:Head}(head::T, args) = Node{T}(head, Node[args...])
+
+function translate(ex::Expr)
+    if contains([:line, :quote, :top, :macrocall], ex.head); Node(Leaf(ex));
+    else; Node(Exp(ex.head), {translate(arg) for arg in ex.args})
+    end
+end
+translate(ex) = Node(Leaf(ex))
+
+
+
+
+
 typealias Position Symbol
 const DEF = :def
 const LHS = :lhs
