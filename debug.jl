@@ -86,9 +86,27 @@ function argpositions(head::Symbol, nargs::Int, pos::Position)
     end
 end
 
+# ---- enscope ----------------------------------------------------------------
+
+type Env
+    parent::Union{nothing, Env}
+    defined::Set{Symbol}
+    assigned::Set{Symbol}
+end
+Env() = Env(nothing, Set{Symbol}(), Set{Symbol}())
+
+enscope(ex) = enscope(Env(), ex, RHS)
+enscope(env::Env, ex, pos::Position) = ex
+
+function enscope(ex::Expr, pos::Position)
+    
+    argpos = argpositions(ex, pos)
+    
+end
 
 
 
+# ---- old ----
 
 type NodeData
     pos::Position
