@@ -9,9 +9,14 @@ trap(line, file) = println("trap: line = $line, file = $(repr(file))")
 
 code = quote
     function()
-        for i=1:3
+        i = 1
+        while i < 4
             println(i)
+            i = i+1
         end
+#         for i=1:3
+#             println(i)
+#         end
     end
 end
 
@@ -21,7 +26,6 @@ println(icode)
 eval(icode)()
 
 
-tcode = translate(code)
-propagate!(tcode, NoScope())
+acode = analyze(code)
 
 end
