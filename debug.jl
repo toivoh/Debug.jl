@@ -44,39 +44,31 @@ Node{T<:Head}(head::T)       = Node{T}(head, Node[])
 Node{T<:Head}(head::T, args) = Node{T}(head, Node[args...])
 
 
-toAST(head::Head, args) = (@assert length(args)==0; toAST(head))
-
-type Exp <: Head
-    head::Symbol
-end
-toAST(head::Exp, args) = expr(head.head, args...)
-is_expr(node::Node{Exp}, head::Symbol) = node.head.head == head
-
-type Leaf{T} <: Head
-    value::T
-end
-toAST(head::Leaf) = head.value
-
+type Exp        <: Head;  head::Symbol;  end
+type Block      <: Head; end
+type Leaf{T}    <: Head;  value::T;      end
 type LineNumber <: Head
     line::Int
     file::String
     ex
 end
-toAST(head::LineNumber) = head.ex
+#is_expr(node::Node{Exp}, head::Symbol) = node.head.head == head
+toAST(head::Head,  args) = (@assert length(args)==0; toAST(head))
+toAST(head::Exp,   args) = expr(head.head, args...)
+toAST(head::Block, args) = expr(:block, args...)
+toAST(head::Leaf)        = head.value
+toAST(head::LineNumber)  = head.ex
 
 
 translate(ex) = translate("", ex)
-
 translate(file::String, ex) = Node(Leaf(ex))
 function translate(file::String, ex::Expr)
     head, args = ex.head, ex.args
     if is_expr(ex, :block)
-        code = {}
-        for arg in args
-            if is_file_linenumber(arg); file = get_sourcefile(arg); end
-            push(code, translate(file, arg))
-        end
-        Node(Exp(:block), code)
+        Node(Block(), { begin
+                if is_file_linenumber(arg); file = get_sourcefile(arg); end
+                translate(file, arg)
+             end for arg in args })
     elseif contains([:quote, :top, :macrocall, :type], head); Node(Leaf(ex))
     elseif is_linenumber(ex); Node(LineNumber(get_linenumber(ex), file, ex))
     else Node(Exp(head), {translate(file, arg) for arg in args})
@@ -88,21 +80,17 @@ end
 
 instrument(ex) = instrument(translate(ex))
 
-function instrument(node::Node)
-    if is_expr(node, :block)
-        code = {}
-        for arg in node.args
-            push(code, instrument(arg))
-            h = arg.head
-            if isa(h, LineNumber)
-                push(code, :($(quot(trap))($(h.line), $(quot(h.file)))) )
-            end
+instrument(n::Node) = toAST(n.head, {instrument(arg) for arg in n.args})
+function instrument(node::Node{Block})
+    code = {}
+    for arg in node.args
+        push(code, instrument(arg))
+        h = arg.head
+        if isa(h, LineNumber)
+            push(code, :($(quot(trap))($(h.line), $(quot(h.file)))) )
         end
-        expr(:block, code)
-    else
-        toAST(node.head, {instrument(arg) for arg in node.args})
     end
+    expr(:block, code)
 end
-
 
 end # module
