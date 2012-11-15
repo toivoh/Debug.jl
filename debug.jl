@@ -1,7 +1,7 @@
 
 module Debug
 using Base
-export trap, instrument, translate, mark_scope!, NoScope
+export trap, instrument, translate, propagate!, NoScope
 
 macro show(ex)
     quote
@@ -91,6 +91,17 @@ end
 
 # ---- Scope analysis ---------------------------------------------------------
 
+function argtraits(node::Node, trait)
+    traits = argtraits(node.head, trait)
+    if length(traits) == 0; fill(trait, length(node.args))
+    else                    replicate_last(traits, length(node.args))
+    end
+end
+function propagate!(n::Node, trait)
+    for (arg, t) in zip(n.args, argtraits(n, trait)); propagate!(arg, t); end
+end
+
+
 type NoScope    <: Scope; end
 type LocalScope <: Scope
     parent::Scope
@@ -99,23 +110,13 @@ type LocalScope <: Scope
 end
 child(s::Scope) = LocalScope(s, Set{Symbol}(), Set{Symbol}())
 
-function argscopes(node::Node, s::Scope)
-    scopes = argscopes(node.head, s)
-    if length(scopes) == 0; fill(s, length(node.args))
-    else                    replicate_last(scopes, length(node.args))
-    end
-end
-argscopes(head::Head, s::Scope) = []
-function argscopes(head::Exp, s::Scope)
+argtraits(head::Head, s::Scope) = []
+function argtraits(head::Exp, s::Scope)
     if head === :while; [s, child(s)]
     elseif contains([:(->), :comprehension, :typed_comprehension], head); [s]
     elseif head === :try; scatch = child(s); [child(s), scatch, scatch]
     else []
     end
-end
-
-function mark_scope!(n::Node, scope::Scope)
-    for (arg, s) in zip(n.args, argscopes(n, scope)); mark_scope!(arg, s); end
 end
 
 

@@ -22,6 +22,6 @@ eval(icode)()
 
 
 tcode = translate(code)
-mark_scope!(tcode, NoScope())
+propagate!(tcode, NoScope())
 
 end
