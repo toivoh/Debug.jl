@@ -1,7 +1,7 @@
 
 module Debug
 using Base
-export trap, instrument
+export trap, instrument, translate, mark_scope!, NoScope
 
 macro show(ex)
     quote
@@ -32,13 +32,27 @@ get_linenumber(ex::Expr)           = ex.args[1]
 get_linenumber(ex::LineNumberNode) = ex.line
 get_sourcefile(ex::Expr)           = string(ex.args[2])
 
+const doublecolon = symbol("::")
+const typed_comprehension = symbol("typed-comprehension")
+
+
+function replicate_last{T}(v::Vector{T}, n)
+    if n < length(v); error("replicate_last: cannot shrink v!"); end
+    [v, fill(v[end], n-length(v))]
+end
+
 
 # ---- translate --------------------------------------------------------------
+
+abstract Scope
 
 abstract Head
 type Node{T<:Head}
     head::T
     args::Vector
+    scope::Scope
+
+    Node(head::T, args::Vector) = new(head, args)
 end
 Node{T<:Head}(head::T)       = Node{T}(head, Node[])
 Node{T<:Head}(head::T, args) = Node{T}(head, Node[args...])
@@ -73,6 +87,35 @@ function translate(file::String, ex::Expr)
     elseif is_linenumber(ex); Node(LineNumber(get_linenumber(ex), file, ex))
     else Node(Exp(head), {translate(file, arg) for arg in args})
     end
+end
+
+# ---- Scope analysis ---------------------------------------------------------
+
+type NoScope    <: Scope; end
+type LocalScope <: Scope
+    parent::Scope
+    defined::Set{Symbol}
+    assigned::Set{Symbol}
+end
+child(s::Scope) = LocalScope(s, Set{Symbol}(), Set{Symbol}())
+
+function argscopes(node::Node, s::Scope)
+    scopes = argscopes(node.head, s)
+    if length(scopes) == 0; fill(s, length(node.args))
+    else                    replicate_last(scopes, length(node.args))
+    end
+end
+argscopes(head::Head, s::Scope) = []
+function argscopes(head::Exp, s::Scope)
+    if head === :while; [s, child(s)]
+    elseif contains([:(->), :comprehension, :typed_comprehension], head); [s]
+    elseif head === :try; scatch = child(s); [child(s), scatch, scatch]
+    else []
+    end
+end
+
+function mark_scope!(n::Node, scope::Scope)
+    for (arg, s) in zip(n.args, argscopes(n, scope)); mark_scope!(arg, s); end
 end
 
 

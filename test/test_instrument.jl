@@ -20,4 +20,8 @@ println(icode)
 
 eval(icode)()
 
+
+tcode = translate(code)
+mark_scope!(tcode, NoScope())
+
 end
