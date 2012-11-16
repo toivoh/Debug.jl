@@ -46,39 +46,42 @@ end
 
 # ---- instrument -------------------------------------------------------------
 
-type Leaf{T}; ex::T; end
+type Leaf{T};  ex::T;                           end
+type Line{T};  ex::T; line::Int; file::String;  end
 
 analyze(ex) = analyze("", ex)
 
 analyze(file::String, ex) = Leaf(ex)
+analyze(file::String, ex::LineNumberNode) = Line(ex, ex.line, file)
 function analyze(file::String, ex::Expr)
     head, args = ex.head, ex.args
-    if contains([:line, :quote, :top, :macrocall, :type], head) Leaf(ex)
-    else expr(head, {analyze(file, arg) for arg in args})
+    if head === :line; Line(ex, ex.args[1], file)
+    elseif contains([:quote, :top, :macrocall, :type], head) Leaf(ex)
+    else expr(head, {
+        begin
+            if is_expr(arg, :line, 2); file = string(arg.args[2]); end
+            analyze(file, arg) 
+        end 
+        for arg in args })
     end
 end
 
-instrument(ex) = instrument("", analyze(ex))
+instrument(ex) = instrument_(analyze(ex))
 
-instrument(file::String, node::Leaf) = node.ex
-function instrument(file::String, ex::Expr)
+instrument_(node::Union(Leaf,Line)) = node.ex
+function instrument_(ex::Expr)
     head, args = ex.head, ex.args
     if head === :block
         code = {}
         for arg in args
-            push(code, instrument(file, arg))
-            if isa(arg, Leaf)
-                lex = arg.ex
-                if is_linenumber(lex)
-                    line = get_linenumber(lex)
-                    if is_expr(lex, :line, 2); file = lex.args[2]; end
-                    push(code, :($(quot(trap))($line, $(quot(file)))) )
-                end
+            push(code, instrument_(arg))
+            if isa(arg, Line)
+                push(code, :($(quot(trap))($(arg.line), $(quot(arg.file)))) )
             end
         end
         expr(head, code)
     else
-        expr(head, {instrument(file, arg) for arg in args})
+        expr(head, {instrument_(arg) for arg in args})
     end
 end
 
