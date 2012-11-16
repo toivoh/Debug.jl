@@ -1,8 +1,7 @@
 
 module Debug
 using Base
-export trap, instrument
-#import Base.promote_rule
+export trap, instrument, analyze
 
 macro show(ex)
     quote
@@ -46,26 +45,47 @@ end
 
 # ---- analyze ----------------------------------------------------------------
 
+type Scope
+    parent::Union(Scope,Nothing)
+#    defined::Set{Symbol}
+#    assigned::Set{Symbol}
+    
+#    Scope(parent) = new(parent, Set{Symbol}(), Set{Symbol}())
+end
+child(s::Scope) = Scope(s)
+
+type Node
+    head::Symbol
+    args::Vector
+    scope::Scope
+end
 type Leaf{T};  ex::T;                           end
 type Line{T};  ex::T; line::Int; file::String;  end
 Line{T}(ex::T, line, file) = Line{T}(ex, line, string(file))
 Line{T}(ex::T, line)       = Line{T}(ex, line, "")
 
-analyze(ex) = (node = analyze1(ex); set_source!(node, ""); node)
+analyze(ex) = (node = analyze1(Scope(nothing),ex); set_source!(node, ""); node)
 
-analyze1(ex) = Leaf(ex)
-analyze1(ex::LineNumberNode) = Line(ex, ex.line, "")
-function analyze1(ex::Expr)
+analyze1(s::Scope, ex)                 = Leaf(ex)
+analyze1(s::Scope, ex::LineNumberNode) = Line(ex, ex.line, "")
+function analyze1(s::Scope, ex::Expr)
     head, args = ex.head, ex.args
-    if head === :line; Line(ex, ex.args...)
-    elseif contains([:quote, :top, :macrocall, :type], head) Leaf(ex)
-    else expr(head, {analyze1(arg) for arg in args })
+    if head === :line; return Line(ex, ex.args...)
+    elseif contains([:quote, :top, :macrocall, :type], head); return Leaf(ex)
+    elseif head === :while
+        Node(head, {analyze1(s, args[1]), analyze1(child(s), args[2])}, s)
+    elseif head === :try
+        stry, scatch = child(s), child(s)
+        Node(head, {analyze1(stry, args[1]),
+             analyze1(scatch, args[2]), analyze1(scatch, args[3])}, s)
+    else
+        Node(head, {analyze1(s, arg) for arg in args}, s)
     end
 end
 
 set_source!(ex,       file::String) = nothing
 set_source!(ex::Line, file::String) = (ex.file = file)
-function set_source!(ex::Expr, file::String)
+function set_source!(ex::Node, file::String)
     for arg in ex.args
         if isa(arg, Line) && arg.file != ""; file = arg.file; end
         set_source!(arg, file)
@@ -78,7 +98,7 @@ end
 instrument(ex) = instrument_(analyze(ex))
 
 instrument_(node::Union(Leaf,Line)) = node.ex
-function instrument_(ex::Expr)
+function instrument_(ex::Node)
     head, args = ex.head, ex.args
     if head === :block
         code = {}

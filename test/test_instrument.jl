@@ -19,4 +19,15 @@ println(icode)
 
 eval(icode)()
 
+code2 = quote
+    i = 1
+    while i <= 3
+        println(i)
+        i += 1
+    end 
+end
+
+acode = analyze(code2)
+#showall(acode.args[4].args[2].args)
+
 end
