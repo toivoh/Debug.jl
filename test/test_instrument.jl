@@ -40,4 +40,14 @@ acode3 = analyze(code3)
 println("\nacode3:")
 showall(acode3.args[2].args)
 
+code4 = :(
+    function f(x::begin; Int; end)
+        x^2
+    end
+)
+
+acode4 = analyze(code4)
+println("\n\nacode4:")
+showall(acode4.args[1].args[2].args)
+
 end

@@ -68,6 +68,7 @@ Line{T}(ex::T, line)       = Line{T}(ex, line, "")
 
 analyze(ex) = (node = analyze1(Scope(nothing),ex); set_source!(node, ""); node)
 
+analyze1(s::Scope, exprs::Vector)      = {analyze1(s, ex) for ex in exprs}
 analyze1(s::Scope, ex)                 = Leaf(ex)
 analyze1(s::Scope, ex::LineNumberNode) = Line(ex, ex.line, "")
 function analyze1(s::Scope, ex::Expr)
@@ -84,6 +85,16 @@ function analyze1(s::Scope, ex::Expr)
     elseif head === :for
         inner = child(s)
         newargs = {analyze1_split(inner, s, args[1]), analyze1(inner, args[2])}
+    elseif head === :function
+        inner = child(s)
+        sig   = args[1]
+        if sig.head === :call
+            call = Node(:call, { analyze1(s, sig.args[1]), 
+                                 analyze1(inner, sig.args[2:end])... })
+        else
+            call = analyze1(inner, sig)
+        end
+        newargs = {call, analyze1(inner, args[2])}
     else
         newargs = {analyze1(s, arg) for arg in args}
     end
