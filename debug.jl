@@ -107,17 +107,16 @@ function analyze1(s::Scope, pos::Pos, ex::Expr)
                            analyze1(inner, RHS, args[2])}, s)
     end
 
-    if head === :while
-        newargs = {analyze1(s, RHS, args[1]), analyze1(child(s), RHS, args[2])}
-    elseif head === :try
-        try_body, catch_arg, catch_body = args
-        stry, scatch = child(s), child(s)
-        newargs = {analyze1(stry,RHS, try_body),
-            analyze1(scatch,DEF, catch_arg), analyze1(scatch,RHS, catch_body)}
-    else
-        newargs = {analyze1(s, pos, arg) for arg in args}
+    nargs = length(args)
+    sp = begin
+        if     head === :while; [(s,RHS), (child(s),RHS)]
+        elseif head === :try; sc = child(s); [(child(s),RHS),(sc,DEF),(sc,RHS)]
+        elseif contains([:global, :local], head); fill((s,DEF), nargs)
+        elseif head === :(=); [(s,(pos==DEF) ? DEF : LHS), (s,RHS)]
+        else fill((s,pos), nargs)
+        end
     end
-    Node(head, newargs, s)
+    Node(head, {analyze1(sa, pos, arg) for ((sa,pos),arg) in zip(sp,args)}, s)
 end
 
 analyze1_split(ls, rs::Scope, ex) = analyze1(ls, DEF, ex)
