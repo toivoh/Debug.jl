@@ -44,27 +44,36 @@ function replicate_last{T}(v::Vector{T}, n)
 end
 
 
-# ---- instrument -------------------------------------------------------------
+# ---- analyze ----------------------------------------------------------------
 
 type Leaf{T};  ex::T;                           end
 type Line{T};  ex::T; line::Int; file::String;  end
+Line{T}(ex::T, line, file) = Line{T}(ex, line, string(file))
+Line{T}(ex::T, line)       = Line{T}(ex, line, "")
 
-analyze(ex) = analyze("", ex)
+analyze(ex) = (node = analyze1(ex); set_source!(node, ""); node)
 
-analyze(file::String, ex) = Leaf(ex)
-analyze(file::String, ex::LineNumberNode) = Line(ex, ex.line, file)
-function analyze(file::String, ex::Expr)
+analyze1(ex) = Leaf(ex)
+analyze1(ex::LineNumberNode) = Line(ex, ex.line, "")
+function analyze1(ex::Expr)
     head, args = ex.head, ex.args
-    if head === :line; Line(ex, ex.args[1], file)
+    if head === :line; Line(ex, ex.args...)
     elseif contains([:quote, :top, :macrocall, :type], head) Leaf(ex)
-    else expr(head, {
-        begin
-            if is_expr(arg, :line, 2); file = string(arg.args[2]); end
-            analyze(file, arg) 
-        end 
-        for arg in args })
+    else expr(head, {analyze1(arg) for arg in args })
     end
 end
+
+set_source!(ex,       file::String) = nothing
+set_source!(ex::Line, file::String) = (ex.file = file)
+function set_source!(ex::Expr, file::String)
+    for arg in ex.args
+        if isa(arg, Line) && arg.file != ""; file = arg.file; end
+        set_source!(arg, file)
+    end
+end
+
+
+# ---- instrument -------------------------------------------------------------
 
 instrument(ex) = instrument_(analyze(ex))
 
