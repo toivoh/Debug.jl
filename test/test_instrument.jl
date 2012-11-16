@@ -20,18 +20,26 @@ println(icode, '\n')
 eval(icode)()
 
 println(instrument(quote
-    global g1, g2
+    global g1::String, g2
     local l
-    i = 1
+    i::Int = 1
+    v = [1,2]
     while i<=3
-        z = i+1
+        z,w = i+1,i+2
         println(z)
         i += 1
+        v[1] = i
     end
     try
         x = 5
     catch e
         println(e)
+    end
+    function f(x, ::Int, y::Float)
+        x
+    end
+    g = (a,b)->begin
+        z=a*b
     end
 end))
 

@@ -111,9 +111,14 @@ function analyze1(s::Scope, pos::Pos, ex::Expr)
     sp = begin
         if     head === :while; [(s,RHS), (child(s),RHS)]
         elseif head === :try; sc = child(s); [(child(s),RHS),(sc,DEF),(sc,RHS)]
+        elseif head === :(->); inner = child(s); [(inner,DEF), (inner,RHS)]
         elseif contains([:global, :local], head); fill((s,DEF), nargs)
         elseif head === :(=); [(s,(pos==DEF) ? DEF : LHS), (s,RHS)]
-        else fill((s,pos), nargs)
+        elseif head === doublecolon && nargs == 1; [(s,RHS)]
+        elseif head === doublecolon && nargs == 2; [(s,pos), (s,RHS)]
+        elseif head === :tuple; fill((s,pos), nargs)
+        elseif head === :ref;   fill((s,RHS), nargs)
+        else fill((s,RHS), nargs)
         end
     end
     Node(head, {analyze1(sa, pos, arg) for ((sa,pos),arg) in zip(sp,args)}, s)
