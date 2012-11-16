@@ -47,10 +47,10 @@ end
 
 type Scope
     parent::Union(Scope,Nothing)
-#    defined::Set{Symbol}
-#    assigned::Set{Symbol}
+   defined::Set{Symbol}
+   assigned::Set{Symbol}
     
-#    Scope(parent) = new(parent, Set{Symbol}(), Set{Symbol}())
+   Scope(parent) = new(parent, Set{Symbol}(), Set{Symbol}())
 end
 child(s::Scope) = Scope(s)
 
@@ -66,47 +66,66 @@ type Line{T};  ex::T; line::Int; file::String;  end
 Line{T}(ex::T, line, file) = Line{T}(ex, line, string(file))
 Line{T}(ex::T, line)       = Line{T}(ex, line, "")
 
-analyze(ex) = (node = analyze1(Scope(nothing),ex); set_source!(node, ""); node)
+typealias Pos Symbol
+const DEF = :def
+const LHS = :lhs
+const RHS = :rhs
 
-analyze1(s::Scope, exprs::Vector)      = {analyze1(s, ex) for ex in exprs}
-analyze1(s::Scope, ex)                 = Leaf(ex)
-analyze1(s::Scope, ex::LineNumberNode) = Line(ex, ex.line, "")
-function analyze1(s::Scope, ex::Expr)
+analyze(ex) = (node = analyze1(Scope(nothing),RHS,ex); set_source!(node, ""); node)
+
+analyze1(s::Scope, pos::Pos, exs::Vector) = {analyze1(s,pos,ex) for ex in exs}
+analyze1(s::Scope, pos::Pos, ex)                 = Leaf(ex)
+analyze1(s::Scope, pos::Pos, ex::LineNumberNode) = Line(ex, ex.line, "")
+function analyze1(s::Scope, pos::Pos, ex::Symbol)
+    if     pos == DEF; add(s.defined,  ex)
+    elseif pos == LHS; add(s.assigned, ex)
+    end
+    Leaf(ex)
+end
+function analyze1(s::Scope, pos::Pos, ex::Expr)
     head, args = ex.head, ex.args
+
+    # non-Node results
     if head === :line; return Line(ex, ex.args...)
     elseif contains([:quote, :top, :macrocall, :type], head); return Leaf(ex)
     end    
-    if head === :while
-        newargs = {analyze1(s, args[1]), analyze1(child(s), args[2])}
-    elseif head === :try
-        stry, scatch = child(s), child(s)
-        newargs = {analyze1(stry, args[1]),
-            analyze1(scatch, args[2]), analyze1(scatch, args[3])}
+
+    # special cases
+    if head === :function
+        inner     = child(s)
+        sig, body = args
+        if sig.head === :call
+            call = Node(:call, { analyze1(s,     LHS, sig.args[1]), 
+                                 analyze1(inner, DEF, sig.args[2:end])... })
+        else
+            call = analyze1(inner, DEF, sig)
+        end
+        return Node(:function, {call, analyze1(inner, RHS, body)}, s)
     elseif head === :for
         inner = child(s)
-        newargs = {analyze1_split(inner, s, args[1]), analyze1(inner, args[2])}
-    elseif head === :function
-        inner = child(s)
-        sig   = args[1]
-        if sig.head === :call
-            call = Node(:call, { analyze1(s, sig.args[1]), 
-                                 analyze1(inner, sig.args[2:end])... })
-        else
-            call = analyze1(inner, sig)
-        end
-        newargs = {call, analyze1(inner, args[2])}
+        return Node(:for, {analyze1_split(inner, s, args[1]), 
+                           analyze1(inner, RHS, args[2])}, s)
+    end
+
+    if head === :while
+        newargs = {analyze1(s, RHS, args[1]), analyze1(child(s), RHS, args[2])}
+    elseif head === :try
+        try_body, catch_arg, catch_body = args
+        stry, scatch = child(s), child(s)
+        newargs = {analyze1(stry,RHS, try_body),
+            analyze1(scatch,DEF, catch_arg), analyze1(scatch,RHS, catch_body)}
     else
-        newargs = {analyze1(s, arg) for arg in args}
+        newargs = {analyze1(s, pos, arg) for arg in args}
     end
     Node(head, newargs, s)
 end
 
-analyze1_split(ls, rs::Scope, ex) = analyze1(ls, ex)
+analyze1_split(ls, rs::Scope, ex) = analyze1(ls, DEF, ex)
 function analyze1_split(ls, rs::Scope, ex::Expr)
     if ex.head === :(=)
-        Node(:(=), {analyze1(ls, ex.args[1]), analyze1(rs, ex.args[2])})
+        Node(:(=), {analyze1(ls,DEF,ex.args[1]), analyze1(rs,RHS,ex.args[2])})
     else
-        analyze1(ls, ex)
+        analyze1(ls, DEF, ex)
     end
 end
 
