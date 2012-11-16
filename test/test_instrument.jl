@@ -41,6 +41,15 @@ println(instrument(quote
     g = (a,b)->begin
         z=a*b
     end
+    let q::Int=1, r
+        s=q
+    end
+    [begin
+         x
+     end for x=1:3,y=1:5]
+    Int[begin
+         x
+     end for x=1:3]
 end))
 
 end

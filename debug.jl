@@ -105,6 +105,12 @@ function analyze1(s::Scope, pos::Pos, ex::Expr)
         inner = child(s)
         return Node(:for, {analyze1_split(inner, s, args[1]), 
                            analyze1(inner, RHS, args[2])}, s)
+    elseif contains([:let, :comprehension], head)
+        return Node(head, analyze1_letargs(s, child(s), args), s)
+    elseif head === typed_comprehension
+        inner = child(s)        
+        return Node(head, {analyze1(inner, RHS, args[1]),
+                           analyze1_letargs(s, inner, args[2:end])...}, s)
     end
 
     nargs = length(args)
@@ -122,6 +128,11 @@ function analyze1(s::Scope, pos::Pos, ex::Expr)
         end
     end
     Node(head, {analyze1(sa, pos, arg) for ((sa,pos),arg) in zip(sp,args)}, s)
+end
+
+function analyze1_letargs(outer::Scope, inner::Scope, args::Vector)
+    return {analyze1(inner, RHS, args[1])
+            {analyze1_split(inner, outer, arg) for arg in args[2:end]}...}
 end
 
 analyze1_split(ls, rs::Scope, ex) = analyze1(ls, DEF, ex)
