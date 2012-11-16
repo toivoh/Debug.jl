@@ -38,6 +38,10 @@ println(instrument(quote
     function f(x, ::Int, y::Float)
         x
     end
+    f(x, ::Int, y::Float) = x
+    f2 = function(x, ::Int, y::Float)
+        x
+    end
     g = (a,b)->begin
         z=a*b
     end

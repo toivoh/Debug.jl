@@ -91,16 +91,12 @@ function analyze1(s::Scope, pos::Pos, ex::Expr)
     end    
 
     # special cases
-    if head === :function
+    if contains([:function, :(=)], head) && is_expr(args[1], :call)
         inner     = child(s)
         sig, body = args
-        if sig.head === :call
-            call = Node(:call, { analyze1(s,     LHS, sig.args[1]), 
-                                 analyze1(inner, DEF, sig.args[2:end])... })
-        else
-            call = analyze1(inner, DEF, sig)
-        end
-        return Node(:function, {call, analyze1(inner, RHS, body)}, s)
+        return Node(head, {Node(:call, { analyze1(s,     LHS, sig.args[1]), 
+                                   analyze1(inner, DEF, sig.args[2:end])... }),
+                           analyze1(inner, RHS, body)}, s)
     elseif head === :for
         inner = child(s)
         return Node(:for, {analyze1_split(inner, s, args[1]), 
@@ -124,6 +120,7 @@ function analyze1(s::Scope, pos::Pos, ex::Expr)
         elseif head === doublecolon && nargs == 2; [(s,pos), (s,RHS)]
         elseif head === :tuple; fill((s,pos), nargs)
         elseif head === :ref;   fill((s,RHS), nargs)
+        elseif head === :function; inner = child(s); [(inner,DEF), (inner,RHS)]
         else fill((s,RHS), nargs)
         end
     end
