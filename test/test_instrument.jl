@@ -27,7 +27,17 @@ code2 = quote
     end 
 end
 
-acode = analyze(code2)
-#showall(acode.args[4].args[2].args)
+acode2 = analyze(code2)
+showall(acode2.args[4].args[2].args); println()
+
+code3 = quote
+    for i = 1:3
+        println(i)
+    end 
+end
+
+acode3 = analyze(code3)
+println("\nacode3:")
+showall(acode3.args[2].args)
 
 end

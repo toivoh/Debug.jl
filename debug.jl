@@ -58,6 +58,8 @@ type Node
     head::Symbol
     args::Vector
     scope::Scope
+    Node(head, args, scope) = new(head, args, scope)
+    Node(head, args)        = new(head, args)
 end
 type Leaf{T};  ex::T;                           end
 type Line{T};  ex::T; line::Int; file::String;  end
@@ -72,14 +74,28 @@ function analyze1(s::Scope, ex::Expr)
     head, args = ex.head, ex.args
     if head === :line; return Line(ex, ex.args...)
     elseif contains([:quote, :top, :macrocall, :type], head); return Leaf(ex)
-    elseif head === :while
-        Node(head, {analyze1(s, args[1]), analyze1(child(s), args[2])}, s)
+    end    
+    if head === :while
+        newargs = {analyze1(s, args[1]), analyze1(child(s), args[2])}
     elseif head === :try
         stry, scatch = child(s), child(s)
-        Node(head, {analyze1(stry, args[1]),
-             analyze1(scatch, args[2]), analyze1(scatch, args[3])}, s)
+        newargs = {analyze1(stry, args[1]),
+            analyze1(scatch, args[2]), analyze1(scatch, args[3])}
+    elseif head === :for
+        inner = child(s)
+        newargs = {analyze1_split(inner, s, args[1]), analyze1(inner, args[2])}
     else
-        Node(head, {analyze1(s, arg) for arg in args}, s)
+        newargs = {analyze1(s, arg) for arg in args}
+    end
+    Node(head, newargs, s)
+end
+
+analyze1_split(ls, rs::Scope, ex) = analyze1(ls, ex)
+function analyze1_split(ls, rs::Scope, ex::Expr)
+    if ex.head === :(=)
+        Node(:(=), {analyze1(ls, ex.args[1]), analyze1(rs, ex.args[2])})
+    else
+        analyze1(ls, ex)
     end
 end
 
