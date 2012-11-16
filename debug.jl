@@ -141,22 +141,39 @@ end
 
 # ---- instrument -------------------------------------------------------------
 
-instrument(ex) = instrument_(analyze(ex))
+instrument(ex) = instrument_((nothing,quot(nothing)), analyze(ex))
 
-instrument_(node::Union(Leaf,Line)) = node.ex
-function instrument_(ex::Node)
+instrument_(env, node::Union(Leaf,Line)) = node.ex
+function instrument_(env, ex::Node)
     head, args = ex.head, ex.args
     if head === :block
         code = {}
+        outer_scope, outer_name = env
+        s = ex.scope
+        syms = Set{Symbol}()
+        while !is(s, outer_scope)
+            add_each(syms, s.defined)
+            add_each(syms, s.assigned)
+            s = s.parent
+        end
+        if isempty(syms)
+            env = (ex.scope, outer_name)
+        else
+            name = gensym("scope")
+            push(code, :( $name = {$({quot(sym) for sym in syms}...)} ))
+            env = (ex.scope, name)
+        end
+
         for arg in args
-            push(code, instrument_(arg))
+            push(code, instrument_(env, arg))
             if isa(arg, Line)
-                push(code, :($(quot(trap))($(arg.line), $(quot(arg.file)))) )
+                push(code, :($(quot(trap))($(arg.line), $(quot(arg.file)),
+                             $(env[2]))) )
             end
         end
         expr(head, code)
     else
-        expr(head, {instrument_(arg) for arg in args})
+        expr(head, {instrument_(env, arg) for arg in args})
     end
 end
 

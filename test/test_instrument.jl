@@ -4,7 +4,7 @@ module TestInstrument
 using Base, Debug
 import Debug.trap
 
-trap(line, file) = println("trap: line = $line, file = $(repr(file))")
+trap(line, file, scope) = println("trap: line = $line, file = $(repr(file))")
 
 code = quote
     function()
@@ -15,7 +15,7 @@ code = quote
 end
 
 icode = instrument(code)
-println(icode)
+println(icode, '\n')
 
 eval(icode)()
 
@@ -27,8 +27,9 @@ code2 = quote
     end 
 end
 
-acode2 = analyze(code2)
-showall(acode2.args[4].args[2].args); println()
+#acode2 = analyze(code2)
+#showall(acode2.args[4].args[2].args); println()
+println(instrument(code2), '\n')
 
 code3 = quote
     for i = 1:3
@@ -36,9 +37,10 @@ code3 = quote
     end 
 end
 
-acode3 = analyze(code3)
-println("\nacode3:")
-showall(acode3.args[2].args)
+# acode3 = analyze(code3)
+# println("\nacode3:")
+# showall(acode3.args[2].args)
+println(instrument(code3), '\n')
 
 code4 = :(
     function f(x::begin; Int; end)
@@ -46,8 +48,9 @@ code4 = :(
     end
 )
 
-acode4 = analyze(code4)
-println("\n\nacode4:")
-showall(acode4.args[1].args[2].args)
+# acode4 = analyze(code4)
+# println("\n\nacode4:")
+# showall(acode4.args[1].args[2].args)
+println(instrument(code4), '\n')
 
 end
