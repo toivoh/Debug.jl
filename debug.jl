@@ -53,12 +53,9 @@ type Scope
 end
 child(s) = Scope(s, Set{Symbol}(), Set{Symbol}())
 
-type Node
-    head::Symbol
+type Block
     args::Vector
     scope::Scope
-    Node(head, args, scope) = new(head, args, scope)
-    Node(head, args)        = new(head, args)
 end
 type Leaf{T};  ex::T;                           end
 type Line{T};  ex::T; line::Int; file::String;  end
@@ -80,7 +77,7 @@ function analyze(ex)
 end
 
 function analyze1(states::Vector, ex) 
-    Node(ex.head, {analyze1(s, arg) for (s, arg) in zip(states, ex.args)})
+    expr(ex.head, {analyze1(s, arg) for (s, arg) in zip(states, ex.args)})
 end
 analyze1(s::State,       ex)                 = Leaf(ex)
 analyze1(s::SimpleState, ex::LineNumberNode) = Line(ex, ex.line, "")
@@ -127,12 +124,16 @@ function analyze1(state::SimpleState, ex::Expr)
         else fill(Rhs(s), nargs)
         end
     end
-    Node(head, {analyze1(st, arg) for (st, arg) in zip(states, args)}, s)
+    if head === :block
+        Block({analyze1(st, arg) for (st, arg) in zip(states, args)}, s)
+    else
+        analyze1(states, ex)
+    end
 end
 
 set_source!(ex,       file::String) = nothing
 set_source!(ex::Line, file::String) = (ex.file = file)
-function set_source!(ex::Node, file::String)
+function set_source!(ex::Union(Expr,Block), file::String)
     for arg in ex.args
         if isa(arg, Line) && arg.file != ""; file = arg.file; end
         set_source!(arg, file)
@@ -145,37 +146,35 @@ end
 instrument(ex) = instrument_((nothing,quot(nothing)), analyze(ex))
 
 instrument_(env, node::Union(Leaf,Line)) = node.ex
-function instrument_(env, ex::Node)
-    head, args = ex.head, ex.args
-    if head === :block
-        code = {}
-        outer_scope, outer_name = env
-        s = ex.scope
-        syms = Set{Symbol}()
-        while !is(s, outer_scope)
-            add_each(syms, s.defined)
-            add_each(syms, s.assigned)
-            s = s.parent
-        end
-        if isempty(syms)
-            env = (ex.scope, outer_name)
-        else
-            name = gensym("scope")
-            push(code, :( $name = {$({quot(sym) for sym in syms}...)} ))
-            env = (ex.scope, name)
-        end
-
-        for arg in args
-            push(code, instrument_(env, arg))
-            if isa(arg, Line)
-                push(code, :($(quot(trap))($(arg.line), $(quot(arg.file)),
-                             $(env[2]))) )
-            end
-        end
-        expr(head, code)
-    else
-        expr(head, {instrument_(env, arg) for arg in args})
+function instrument_(env, ex::Expr)
+    expr(ex.head, {instrument_(env, arg) for arg in ex.args})
+end
+function instrument_(env, ex::Block)
+    code = {}
+    outer_scope, outer_name = env
+    s = ex.scope
+    syms = Set{Symbol}()
+    while !is(s, outer_scope)
+        add_each(syms, s.defined)
+        add_each(syms, s.assigned)
+        s = s.parent
     end
+    if isempty(syms)
+        env = (ex.scope, outer_name)
+    else
+        name = gensym("scope")
+        push(code, :( $name = {$({quot(sym) for sym in syms}...)} ))
+        env = (ex.scope, name)
+    end
+    
+    for arg in ex.args
+        push(code, instrument_(env, arg))
+        if isa(arg, Line)
+            push(code, :($(quot(trap))($(arg.line), $(quot(arg.file)),
+                                       $(env[2]))) )
+        end
+    end
+    expr(:block, code)
 end
 
 end # module
