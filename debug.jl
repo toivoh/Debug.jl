@@ -92,40 +92,40 @@ function analyze1(s::SplitDef, ex::Expr)
     end
 end
 
+function argstates(state::SimpleState, head, args)
+    s, nargs = state.scope, length(args)
+    if contains([:function, :(=)], head) && is_expr(args[1], :call)
+        inner = child(s)
+        {[Lhs(s), fill(Def(inner), length(args[1].args)-1)],Rhs(inner)}
+    elseif contains([:function, :(->)], head)
+        inner = child(s); [Def(inner), Rhs(inner)]
+        
+    elseif contains([:global, :local], head); fill(Def(s), nargs)
+    elseif head === :while;                [Rhs(s), Rhs(child(s))]
+    elseif head === :try; sc = child(s);   [Rhs(child(s)), Def(sc),Rhs(sc)]
+    elseif head === :for; inner = child(s);[SplitDef(inner,s), Rhs(inner)]
+    elseif contains([:let, :comprehension], head); inner = child(s); 
+        [Rhs(inner), fill(SplitDef(inner,s), nargs-1)]
+    elseif head === typed_comprehension; inner = child(s)
+        [Rhs(inner), Rhs(inner), fill(SplitDef(inner,s), nargs-2)]
+        
+    elseif head === :(=);   [(isa(state,Def) ? state : Lhs(s)), Rhs(s)]
+    elseif head === :tuple; fill(state,  nargs)
+    elseif head === :ref;   fill(Rhs(s), nargs)
+    elseif head === doublecolon && nargs == 1; [Rhs(s)]
+    elseif head === doublecolon && nargs == 2; [state, Rhs(s)]
+    else fill(Rhs(s), nargs)
+    end
+end
+
 function analyze1(state::SimpleState, ex::Expr)
     head,  args  = ex.head, ex.args
-    s, nargs = state.scope, length(args)
-
-    # non-Node results
     if head === :line; return Line(ex, ex.args...)
     elseif contains([:quote, :top, :macrocall, :type], head); return Leaf(ex)
-    end    
-
-    states = begin
-        if contains([:function, :(=)], head) && is_expr(args[1], :call)
-            inner = child(s)
-            {[Lhs(s), fill(Def(inner), length(args[1].args)-1)],Rhs(inner)}
-        elseif contains([:function, :(->)], head)
-            inner = child(s); [Def(inner), Rhs(inner)]
-
-        elseif contains([:global, :local], head); fill(Def(s), nargs)
-        elseif head === :while;                [Rhs(s), Rhs(child(s))]
-        elseif head === :try; sc = child(s);   [Rhs(child(s)), Def(sc),Rhs(sc)]
-        elseif head === :for; inner = child(s);[SplitDef(inner,s), Rhs(inner)]
-        elseif contains([:let, :comprehension], head); inner = child(s); 
-            [Rhs(inner), fill(SplitDef(inner,s), nargs-1)]
-        elseif head === typed_comprehension; inner = child(s)
-            [Rhs(inner), Rhs(inner), fill(SplitDef(inner,s), nargs-2)]
-
-        elseif head === :(=);   [(isa(state,Def) ? state : Lhs(s)), Rhs(s)]
-        elseif head === :tuple; fill(state,  nargs)
-        elseif head === :ref;   fill(Rhs(s), nargs)
-        elseif head === doublecolon && nargs == 1; [Rhs(s)]
-        elseif head === doublecolon && nargs == 2; [state, Rhs(s)]
-        else fill(Rhs(s), nargs)
-        end
     end
-    if head === :block; Block(analyze1(states, args), s)
+
+    states = argstates(state, head, args)
+    if head === :block; Block(analyze1(states, args), state.scope)
     else                analyze1(states, ex)
     end
 end
