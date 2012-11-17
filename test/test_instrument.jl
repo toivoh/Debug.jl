@@ -27,11 +27,11 @@ println(instrument(quote
     while i<=3
         z,w = i+1,i+2
         println(z)
-        i += 1
+        i = i+1
         v[1] = i
     end
-    for j = 1:5
-        println(j)
+    for i = 1:5
+        println(i)
     end
     try
         x = 5

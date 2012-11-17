@@ -50,8 +50,9 @@ type Scope
     parent::Union(Scope,Nothing)
     defined::Set{Symbol}
     assigned::Set{Symbol}
+    processed::Bool
 end
-child(s) = Scope(s, Set{Symbol}(), Set{Symbol}())
+child(s) = Scope(s, Set{Symbol}(), Set{Symbol}(), false)
 
 type Block
     args::Vector
@@ -148,11 +149,20 @@ instrument_(env, node::Union(Leaf,Line)) = node.ex
 function instrument_(env, ex::Expr)
     expr(ex.head, {instrument_(env, arg) for arg in ex.args})
 end
-function collect_syms!(syms::Set{Symbol}, s, outer)
+collect_syms!(syms::Set{Symbol}, ::Nothing, outer) = nothing
+function collect_syms!(syms::Set{Symbol}, s::Scope, outer)
     if is(s, outer); return; end
-    add_each(syms, s.defined)
-    add_each(syms, s.assigned)
     collect_syms!(syms, s.parent, outer)
+    if !s.processed
+        if isa(s.parent, Scope)
+            s.defined  = s.defined | (s.assigned - s.parent.assigned)
+            s.assigned = s.defined | s.parent.assigned
+        else
+            s.defined  = s.defined | s.assigned
+            s.assigned = s.defined
+        end
+    end
+    add_each(syms, s.defined)
 end
 function instrument_(env, ex::Block)
     syms = Set{Symbol}()
