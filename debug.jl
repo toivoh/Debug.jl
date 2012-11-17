@@ -1,6 +1,7 @@
 
 module Debug
 using Base
+import Base.promote_rule
 export trap, instrument, analyze
 
 macro show(ex)
@@ -66,24 +67,24 @@ type Line{T};  ex::T; line::Int; file::String;  end
 Line{T}(ex::T, line, file) = Line{T}(ex, line, string(file))
 Line{T}(ex::T, line)       = Line{T}(ex, line, "")
 
-typealias Pos Symbol
-const DEF = :def
-const LHS = :lhs
-const RHS = :rhs
+abstract State
+promote_rule{S<:State,T<:State}(::Type{S},::Type{T}) = State
+type Def <: State;  scope::Scope;  end
+type Lhs <: State;  scope::Scope;  end
+type Rhs <: State;  scope::Scope;  end
 
-analyze(ex) = (node = analyze1(Scope(nothing),RHS,ex); set_source!(node, ""); node)
+analyze(ex) = (node = analyze1(Rhs(Scope(nothing)),ex); set_source!(node, ""); node)
 
-analyze1(s::Scope, pos::Pos, exs::Vector) = {analyze1(s,pos,ex) for ex in exs}
-analyze1(s::Scope, pos::Pos, ex)                 = Leaf(ex)
-analyze1(s::Scope, pos::Pos, ex::LineNumberNode) = Line(ex, ex.line, "")
-function analyze1(s::Scope, pos::Pos, ex::Symbol)
-    if     pos == DEF; add(s.defined,  ex)
-    elseif pos == LHS; add(s.assigned, ex)
-    end
-    Leaf(ex)
-end
-function analyze1(s::Scope, pos::Pos, ex::Expr)
+analyze1(s::State, exs::Vector)        = {analyze1(s, ex) for ex in exs}
+analyze1(s::State, ex)                 = Leaf(ex)
+analyze1(s::State, ex::LineNumberNode) = Line(ex, ex.line, "")
+
+analyze1(s::Def,   ex::Symbol)         = (add(s.scope.defined,  ex); Leaf(ex))
+analyze1(s::Lhs,   ex::Symbol)         = (add(s.scope.assigned, ex); Leaf(ex))
+
+function analyze1(s::State, ex::Expr)
     head, args = ex.head, ex.args
+    scope = s.scope
 
     # non-Node results
     if head === :line; return Line(ex, ex.args...)
@@ -92,52 +93,55 @@ function analyze1(s::Scope, pos::Pos, ex::Expr)
 
     # special cases
     if contains([:function, :(=)], head) && is_expr(args[1], :call)
-        inner     = child(s)
+        inner     = child(scope)
         sig, body = args
-        return Node(head, {Node(:call, { analyze1(s,     LHS, sig.args[1]), 
-                                   analyze1(inner, DEF, sig.args[2:end])... }),
-                           analyze1(inner, RHS, body)}, s)
+        return Node(head, {Node(:call, { analyze1(Lhs(scope), sig.args[1]), 
+                                   analyze1(Def(inner), sig.args[2:end])... }),
+                           analyze1(Rhs(inner), body)}, scope)
     elseif head === :for
-        inner = child(s)
-        return Node(:for, {analyze1_split(inner, s, args[1]), 
-                           analyze1(inner, RHS, args[2])}, s)
+        inner = child(scope)
+        return Node(:for, {analyze1_split(inner, scope, args[1]), 
+                           analyze1(Rhs(inner), args[2])}, scope)
     elseif contains([:let, :comprehension], head)
-        return Node(head, analyze1_letargs(s, child(s), args), s)
+        return Node(head, analyze1_letargs(scope, child(scope), args), scope)
     elseif head === typed_comprehension
-        inner = child(s)        
-        return Node(head, {analyze1(inner, RHS, args[1]),
-                           analyze1_letargs(s, inner, args[2:end])...}, s)
+        inner = child(scope)        
+        return Node(head, {analyze1(Rhs(inner), args[1]),
+                        analyze1_letargs(scope, inner, args[2:end])...}, scope)
     end
 
     nargs = length(args)
-    sp = begin
-        if     head === :while; [(s,RHS), (child(s),RHS)]
-        elseif head === :try; sc = child(s); [(child(s),RHS),(sc,DEF),(sc,RHS)]
-        elseif head === :(->); inner = child(s); [(inner,DEF), (inner,RHS)]
-        elseif contains([:global, :local], head); fill((s,DEF), nargs)
-        elseif head === :(=); [(s,(pos==DEF) ? DEF : LHS), (s,RHS)]
-        elseif head === doublecolon && nargs == 1; [(s,RHS)]
-        elseif head === doublecolon && nargs == 2; [(s,pos), (s,RHS)]
-        elseif head === :tuple; fill((s,pos), nargs)
-        elseif head === :ref;   fill((s,RHS), nargs)
-        elseif head === :function; inner = child(s); [(inner,DEF), (inner,RHS)]
-        else fill((s,RHS), nargs)
+    states = begin
+        if     head === :while; [Rhs(scope), Rhs(child(scope))]
+        elseif head === :try; sc = child(scope); 
+            [Rhs(child(scope)), Def(sc),Rhs(sc)]
+        elseif head === :(->); inner = child(scope); [Def(inner), Rhs(inner)]
+        elseif contains([:global, :local], head); fill(Def(scope), nargs)
+        elseif head === :(=); [isa(s,Def) ? s : Lhs(scope), Rhs(scope)]
+        elseif head === doublecolon && nargs == 1; [Rhs(scope)]
+        elseif head === doublecolon && nargs == 2; [s, Rhs(scope)]
+        elseif head === :tuple; fill(s, nargs)
+        elseif head === :ref;   fill(Rhs(scope), nargs)
+        elseif head === :function; inner = child(scope); 
+            [Def(inner), Rhs(inner)]
+        else fill(Rhs(scope), nargs)
         end
     end
-    Node(head, {analyze1(sa, pos, arg) for ((sa,pos),arg) in zip(sp,args)}, s)
+    Node(head, {analyze1(st, arg) for (st, arg) in zip(states, args)}, scope)
 end
 
 function analyze1_letargs(outer::Scope, inner::Scope, args::Vector)
-    return {analyze1(inner, RHS, args[1])
+    return {analyze1(Rhs(inner), args[1])
             {analyze1_split(inner, outer, arg) for arg in args[2:end]}...}
 end
 
-analyze1_split(ls, rs::Scope, ex) = analyze1(ls, DEF, ex)
+analyze1_split(ls, rs::Scope, ex) = analyze1(Def(ls), ex)
 function analyze1_split(ls, rs::Scope, ex::Expr)
     if ex.head === :(=)
-        Node(:(=), {analyze1(ls,DEF,ex.args[1]), analyze1(rs,RHS,ex.args[2])})
+        Node(:(=), {analyze1(Def(ls),ex.args[1]), 
+                    analyze1(Rhs(rs),ex.args[2])})
     else
-        analyze1(ls, DEF, ex)
+        analyze1(Def(ls), ex)
     end
 end
 
