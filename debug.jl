@@ -77,15 +77,18 @@ type SplitDef <: State;  ls::Scope; rs::Scope;  end
 
 analyze(ex) = (node = analyze1(Rhs(Scope(nothing)),ex); set_source!(node, ""); node)
 
-analyze1(s::State, exs::Vector)              = {analyze1(s, ex) for ex in exs}
-analyze1(s::State, ex)                       = Leaf(ex)
+analyze1(s::State,       ex)                 = Leaf(ex)
 analyze1(s::SimpleState, ex::LineNumberNode) = Line(ex, ex.line, "")
 
 analyze1(s::Def,   ex::Symbol)         = (add(s.scope.defined,  ex); Leaf(ex))
 analyze1(s::Lhs,   ex::Symbol)         = (add(s.scope.assigned, ex); Leaf(ex))
 
+function analyze1(states::Vector, ex) 
+    Node(ex.head, {analyze1(s, arg) for (s, arg) in zip(states, ex.args)})
+end
+
 analyze1(s::SplitDef, ex) = analyze1(Def(s.ls), ex)
-function analyze1_split(s::SplitDef, ex::Expr)
+function analyze1(s::SplitDef, ex::Expr)
     if (ex.head === :(=)) Node(:(=), {analyze1(Def(s.ls), ex.args[1]), 
                                       analyze1(Rhs(s.rs), ex.args[2])})
     else analyze1(Def(s.ls), ex)
@@ -101,18 +104,12 @@ function analyze1(s::SimpleState, ex::Expr)
     elseif contains([:quote, :top, :macrocall, :type], head); return Leaf(ex)
     end    
 
-    # special cases
-    if contains([:function, :(=)], head) && is_expr(args[1], :call)
-        inner     = child(scope)
-        sig, body = args
-        return Node(head, {Node(:call, { analyze1(Lhs(scope), sig.args[1]), 
-                                   analyze1(Def(inner), sig.args[2:end])... }),
-                           analyze1(Rhs(inner), body)}, scope)
-    end
-
     nargs = length(args)
     states = begin
-        if     head === :while; [Rhs(scope), Rhs(child(scope))]
+        if contains([:function, :(=)], head) && is_expr(args[1], :call)
+            inner     = child(scope)
+            {[Lhs(scope), fill(Def(inner), length(args[1].args)-1)],Rhs(inner)}
+        elseif head === :while; [Rhs(scope), Rhs(child(scope))]
         elseif head === :try; sc = child(scope); 
             [Rhs(child(scope)), Def(sc),Rhs(sc)]
         elseif head === :(->); inner = child(scope); [Def(inner), Rhs(inner)]

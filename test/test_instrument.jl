@@ -48,7 +48,7 @@ println(instrument(quote
     g = (a,b)->begin
         z=a*b
     end
-    let q::Int=1, r
+    let q::Int=i, r
         s=q
     end
     [begin
