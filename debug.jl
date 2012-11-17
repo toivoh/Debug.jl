@@ -148,18 +148,19 @@ instrument_(env, node::Union(Leaf,Line)) = node.ex
 function instrument_(env, ex::Expr)
     expr(ex.head, {instrument_(env, arg) for arg in ex.args})
 end
+function collect_syms!(syms::Set{Symbol}, s, outer)
+    if is(s, outer); return; end
+    add_each(syms, s.defined)
+    add_each(syms, s.assigned)
+    collect_syms!(syms, s.parent, outer)
+end
 function instrument_(env, ex::Block)
-    code = {}
-    outer_scope, outer_name = env
-    s = ex.scope
     syms = Set{Symbol}()
-    while !is(s, outer_scope)
-        add_each(syms, s.defined)
-        add_each(syms, s.assigned)
-        s = s.parent
-    end
+    collect_syms!(syms, ex.scope, env[1])
+    
+    code = {}
     if isempty(syms)
-        env = (ex.scope, outer_name)
+        env = (ex.scope, env[2])
     else
         name = gensym("scope")
         push(code, :( $name = {$({quot(sym) for sym in syms}...)} ))
