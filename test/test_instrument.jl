@@ -30,6 +30,9 @@ println(instrument(quote
         i += 1
         v[1] = i
     end
+    for j = 1:5
+        println(j)
+    end
     try
         x = 5
     catch e
