@@ -64,11 +64,11 @@ Line{T}(ex::T, line)       = Line{T}(ex, line, "")
 
 abstract State
 abstract SimpleState <: State
-promote_rule{S<:State,T<:State}(::Type{S},::Type{T}) = State
 type Def <: SimpleState;  scope::Scope;  end
 type Lhs <: SimpleState;  scope::Scope;  end
 type Rhs <: SimpleState;  scope::Scope;  end
 type SplitDef <: State;  ls::Scope; rs::Scope;  end
+promote_rule{S<:State,T<:State}(::Type{S},::Type{T}) = State
 
 function analyze(ex)
     node = analyze1(Rhs(child(nothing)), ex)
@@ -81,7 +81,7 @@ function analyze1(states::Vector, args::Vector)
 end
 analyze1(states::Vector, ex) = expr(ex.head, analyze1(states, ex.args))
 analyze1(s::State,       ex)                 = Leaf(ex)
-analyze1(s::SimpleState, ex::LineNumberNode) = Line(ex, ex.line, "")
+analyze1(s::SimpleState, ex::LineNumberNode) = Line(ex, ex.line)
 analyze1(s::Def, ex::Symbol) = (add(s.scope.defined,  ex); Leaf(ex))
 analyze1(s::Lhs, ex::Symbol) = (add(s.scope.assigned, ex); Leaf(ex))
 
