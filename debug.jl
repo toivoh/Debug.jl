@@ -76,9 +76,10 @@ function analyze(ex)
     node
 end
 
-function analyze1(states::Vector, ex) 
-    expr(ex.head, {analyze1(s, arg) for (s, arg) in zip(states, ex.args)})
+function analyze1(states::Vector, args::Vector) 
+    {analyze1(s, arg) for (s, arg) in zip(states, args)}
 end
+analyze1(states::Vector, ex) = expr(ex.head, analyze1(states, ex.args))
 analyze1(s::State,       ex)                 = Leaf(ex)
 analyze1(s::SimpleState, ex::LineNumberNode) = Line(ex, ex.line, "")
 analyze1(s::Def, ex::Symbol) = (add(s.scope.defined,  ex); Leaf(ex))
@@ -124,10 +125,8 @@ function analyze1(state::SimpleState, ex::Expr)
         else fill(Rhs(s), nargs)
         end
     end
-    if head === :block
-        Block({analyze1(st, arg) for (st, arg) in zip(states, args)}, s)
-    else
-        analyze1(states, ex)
+    if head === :block; Block(analyze1(states, args), s)
+    else                analyze1(states, ex)
     end
 end
 
