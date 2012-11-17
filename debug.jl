@@ -48,12 +48,10 @@ end
 
 type Scope
     parent::Union(Scope,Nothing)
-   defined::Set{Symbol}
-   assigned::Set{Symbol}
-    
-   Scope(parent) = new(parent, Set{Symbol}(), Set{Symbol}())
+    defined::Set{Symbol}
+    assigned::Set{Symbol}
 end
-child(s::Scope) = Scope(s)
+child(s) = Scope(s, Set{Symbol}(), Set{Symbol}())
 
 type Node
     head::Symbol
@@ -75,7 +73,7 @@ type Lhs <: SimpleState;  scope::Scope;  end
 type Rhs <: SimpleState;  scope::Scope;  end
 type SplitDef <: State;  ls::Scope; rs::Scope;  end
 
-analyze(ex) = (node = analyze1(Rhs(Scope(nothing)),ex); set_source!(node, ""); node)
+analyze(ex) = (node = analyze1(Rhs(child(nothing)),ex); set_source!(node, ""); node)
 
 analyze1(s::State,       ex)                 = Leaf(ex)
 analyze1(s::SimpleState, ex::LineNumberNode) = Line(ex, ex.line, "")
