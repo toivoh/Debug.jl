@@ -73,39 +73,39 @@ type Lhs <: SimpleState;  scope::Scope;  end
 type Rhs <: SimpleState;  scope::Scope;  end
 type SplitDef <: State;  ls::Scope; rs::Scope;  end
 
-analyze(ex) = (node = analyze1(Rhs(child(nothing)),ex); set_source!(node, ""); node)
-
-analyze1(s::State,       ex)                 = Leaf(ex)
-analyze1(s::SimpleState, ex::LineNumberNode) = Line(ex, ex.line, "")
-
-analyze1(s::Def,   ex::Symbol)         = (add(s.scope.defined,  ex); Leaf(ex))
-analyze1(s::Lhs,   ex::Symbol)         = (add(s.scope.assigned, ex); Leaf(ex))
+function analyze(ex)
+    node = analyze1(Rhs(child(nothing)), ex)
+    set_source!(node, "")
+    node
+end
 
 function analyze1(states::Vector, ex) 
     Node(ex.head, {analyze1(s, arg) for (s, arg) in zip(states, ex.args)})
 end
+analyze1(s::State,       ex)                 = Leaf(ex)
+analyze1(s::SimpleState, ex::LineNumberNode) = Line(ex, ex.line, "")
+analyze1(s::Def, ex::Symbol) = (add(s.scope.defined,  ex); Leaf(ex))
+analyze1(s::Lhs, ex::Symbol) = (add(s.scope.assigned, ex); Leaf(ex))
 
 analyze1(s::SplitDef, ex) = analyze1(Def(s.ls), ex)
 function analyze1(s::SplitDef, ex::Expr)
-    if (ex.head === :(=)) Node(:(=), {analyze1(Def(s.ls), ex.args[1]), 
-                                      analyze1(Rhs(s.rs), ex.args[2])})
-    else analyze1(Def(s.ls), ex)
+    if (ex.head === :(=)) analyze1([Def(s.ls), Rhs(s.rs)], ex)
+    else                  analyze1(Def(s.ls), ex)
     end
 end
 
 function analyze1(s::SimpleState, ex::Expr)
-    head, args = ex.head, ex.args
-    scope = s.scope
+    head,  args  = ex.head, ex.args
+    scope, nargs = s.scope, length(args)
 
     # non-Node results
     if head === :line; return Line(ex, ex.args...)
     elseif contains([:quote, :top, :macrocall, :type], head); return Leaf(ex)
     end    
 
-    nargs = length(args)
     states = begin
         if contains([:function, :(=)], head) && is_expr(args[1], :call)
-            inner     = child(scope)
+            inner = child(scope)
             {[Lhs(scope), fill(Def(inner), length(args[1].args)-1)],Rhs(inner)}
         elseif head === :while; [Rhs(scope), Rhs(child(scope))]
         elseif head === :try; sc = child(scope); 
