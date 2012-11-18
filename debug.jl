@@ -46,17 +46,17 @@ end
 
 # ---- analyze ----------------------------------------------------------------
 
-type Scope
-    parent::Union(Scope,Nothing)
+type Env
+    parent::Union(Env,Nothing)
     defined::Set{Symbol}
     assigned::Set{Symbol}
     processed::Bool
 end
-child(s) = Scope(s, Set{Symbol}(), Set{Symbol}(), false)
+child(s) = Env(s, Set{Symbol}(), Set{Symbol}(), false)
 
 type Block
     args::Vector
-    scope::Scope
+    env::Env
 end
 type Leaf{T};  ex::T;                           end
 type Line{T};  ex::T; line::Int; file::String;  end
@@ -65,10 +65,10 @@ Line{T}(ex::T, line)       = Line{T}(ex, line, "")
 
 abstract State
 abstract SimpleState <: State
-type Def <: SimpleState;  scope::Scope;  end
-type Lhs <: SimpleState;  scope::Scope;  end
-type Rhs <: SimpleState;  scope::Scope;  end
-type SplitDef <: State;  ls::Scope; rs::Scope;  end
+type Def <: SimpleState;  env::Env;  end
+type Lhs <: SimpleState;  env::Env;  end
+type Rhs <: SimpleState;  env::Env;  end
+type SplitDef <: State;  ls::Env; rs::Env;  end
 promote_rule{S<:State,T<:State}(::Type{S},::Type{T}) = State
 
 function analyze(ex)
@@ -83,8 +83,8 @@ end
 analyze1(states::Vector, ex) = expr(ex.head, analyze1(states, ex.args))
 analyze1(s::State,       ex)                 = Leaf(ex)
 analyze1(s::SimpleState, ex::LineNumberNode) = Line(ex, ex.line)
-analyze1(s::Def, ex::Symbol) = (add(s.scope.defined,  ex); Leaf(ex))
-analyze1(s::Lhs, ex::Symbol) = (add(s.scope.assigned, ex); Leaf(ex))
+analyze1(s::Def, ex::Symbol) = (add(s.env.defined,  ex); Leaf(ex))
+analyze1(s::Lhs, ex::Symbol) = (add(s.env.assigned, ex); Leaf(ex))
 
 analyze1(s::SplitDef, ex) = analyze1(Def(s.ls), ex)
 function analyze1(s::SplitDef, ex::Expr)
@@ -94,28 +94,28 @@ function analyze1(s::SplitDef, ex::Expr)
 end
 
 function argstates(state::SimpleState, head, args)
-    s, nargs = state.scope, length(args)
+    e, nargs = state.env, length(args)
     if contains([:function, :(=)], head) && is_expr(args[1], :call)
-        inner = child(s)
-        {[Lhs(s), fill(Def(inner), length(args[1].args)-1)],Rhs(inner)}
+        inner = child(e)
+        {[Lhs(e), fill(Def(inner), length(args[1].args)-1)],Rhs(inner)}
     elseif contains([:function, :(->)], head)
-        inner = child(s); [Def(inner), Rhs(inner)]
+        inner = child(e); [Def(inner), Rhs(inner)]
         
-    elseif contains([:global, :local], head); fill(Def(s), nargs)
-    elseif head === :while;                [Rhs(s), Rhs(child(s))]
-    elseif head === :try; sc = child(s);   [Rhs(child(s)), Def(sc),Rhs(sc)]
-    elseif head === :for; inner = child(s);[SplitDef(inner,s), Rhs(inner)]
-    elseif contains([:let, :comprehension], head); inner = child(s); 
-        [Rhs(inner), fill(SplitDef(inner,s), nargs-1)]
-    elseif head === typed_comprehension; inner = child(s)
-        [Rhs(inner), Rhs(inner), fill(SplitDef(inner,s), nargs-2)]
+    elseif contains([:global, :local], head); fill(Def(e), nargs)
+    elseif head === :while;                [Rhs(e), Rhs(child(e))]
+    elseif head === :try; ec = child(e);   [Rhs(child(e)), Def(ec),Rhs(ec)]
+    elseif head === :for; inner = child(e);[SplitDef(inner,e), Rhs(inner)]
+    elseif contains([:let, :comprehension], head); inner = child(e); 
+        [Rhs(inner), fill(SplitDef(inner,e), nargs-1)]
+    elseif head === typed_comprehension; inner = child(e)
+        [Rhs(inner), Rhs(inner), fill(SplitDef(inner,e), nargs-2)]
         
-    elseif head === :(=);   [(isa(state,Def) ? state : Lhs(s)), Rhs(s)]
+    elseif head === :(=);   [(isa(state,Def) ? state : Lhs(e)), Rhs(e)]
     elseif head === :tuple; fill(state,  nargs)
-    elseif head === :ref;   fill(Rhs(s), nargs)
-    elseif head === doublecolon && nargs == 1; [Rhs(s)]
-    elseif head === doublecolon && nargs == 2; [state, Rhs(s)]
-    else fill(Rhs(s), nargs)
+    elseif head === :ref;   fill(Rhs(e), nargs)
+    elseif head === doublecolon && nargs == 1; [Rhs(e)]
+    elseif head === doublecolon && nargs == 2; [state, Rhs(e)]
+    else fill(Rhs(e), nargs)
     end
 end
 
@@ -126,7 +126,7 @@ function analyze1(state::SimpleState, ex::Expr)
     end
 
     states = argstates(state, head, args)
-    if head === :block; Block(analyze1(states, args), state.scope)
+    if head === :block; Block(analyze1(states, args), state.env)
     else                analyze1(states, ex)
     end
 end
@@ -150,11 +150,11 @@ function instrument_(env, ex::Expr)
     expr(ex.head, {instrument_(env, arg) for arg in ex.args})
 end
 collect_syms!(syms::Set{Symbol}, ::Nothing, outer) = nothing
-function collect_syms!(syms::Set{Symbol}, s::Scope, outer)
+function collect_syms!(syms::Set{Symbol}, s::Env, outer)
     if is(s, outer); return; end
     collect_syms!(syms, s.parent, outer)
     if !s.processed
-        if isa(s.parent, Scope)
+        if isa(s.parent, Env)
             s.defined  = s.defined | (s.assigned - s.parent.assigned)
             s.assigned = s.defined | s.parent.assigned
         else
@@ -166,15 +166,15 @@ function collect_syms!(syms::Set{Symbol}, s::Scope, outer)
 end
 function instrument_(env, ex::Block)
     syms = Set{Symbol}()
-    collect_syms!(syms, ex.scope, env[1])
+    collect_syms!(syms, ex.env, env[1])
     
     code = {}
     if isempty(syms)
-        env = (ex.scope, env[2])
+        env = (ex.env, env[2])
     else
-        name = gensym("scope")
+        name = gensym("env")
         push(code, :( $name = {$({quot(sym) for sym in syms}...)} ))
-        env = (ex.scope, name)
+        env = (ex.env, name)
     end
     
     for arg in ex.args
