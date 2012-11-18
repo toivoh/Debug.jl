@@ -3,7 +3,7 @@ module Debug
 using Base
 import Base.promote_rule
 import Base.ref, Base.assign, Base.has
-export trap, instrument, analyze, @debug, Scope
+export trap, instrument, analyze, @debug, Scope, graft, debug_eval
 
 macro show(ex)
     quote
@@ -240,6 +240,26 @@ macro debug(ex)
         end
         $(esc(instrument(ex)))
     end
+end
+
+
+# ---- debug_eval -------------------------------------------------------------
+
+graft(s::Scope, ex) = ex
+graft(s::Scope, ex::SymbolNode) = graft(s, ex.name)
+function graft(s::Scope, ex::Symbol)
+    has(s, ex) ? :($(quot(get_getter(s, ex)))()) : ex
+end
+graft(s::Scope, ex::Expr)  = Expr(ex.head, {graft(s,arg) for arg in ex.args})
+graft(s::Scope, ex::Block) = Expr(:block,  {graft(s,arg) for arg in ex.args})
+graft(s::Scope, node::Union(Leaf,Line)) = node.ex
+
+#debug_eval(scope::Scope, ex) = eval(graft(scope, ex))
+function debug_eval(scope::Scope, ex)
+     ex2 = graft(scope, ex)
+    # @show ex2
+     eval(ex2)
+#    eval(graft(scope, ex)) # doesn't work?
 end
 
 end # module
