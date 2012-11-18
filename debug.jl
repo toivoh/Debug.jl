@@ -2,6 +2,7 @@
 module Debug
 using Base
 import Base.promote_rule
+import Base.ref, Base.assign
 export trap, instrument, analyze
 
 macro show(ex)
@@ -36,6 +37,7 @@ get_sourcefile(ex::Expr)           = string(ex.args[2])
 
 const doublecolon = symbol("::")
 const typed_comprehension = symbol("typed-comprehension")
+const typed_dict          = symbol("typed-dict")
 
 
 function replicate_last{T}(v::Vector{T}, n)
@@ -141,9 +143,44 @@ function set_source!(ex::Union(Expr,Block), file::String)
 end
 
 
+# ---- Scope: runtime symbol table with getters and setters -------------------
+
+abstract Scope
+
+type NoScope <: Scope; end
+has(scope::NoScope, sym::Symbol) = false
+
+type LocalScope <: Scope
+    parent::Scope
+    syms::Dict
+end
+
+function has(scope::LocalScope, sym::Symbol)
+    has(scope.syms, sym) || has(scope.parent, sym)
+end
+function get_entry(scope::LocalScope, sym::Symbol)
+    has(scope.syms, sym) ? scope.syms[sym] : get_entry(scope.parent, sym)
+end
+
+get_getter(scope::LocalScope, sym::Symbol) = get_entry( scope, sym)[1]
+get_setter(scope::LocalScope, sym::Symbol) = get_entry( scope, sym)[2]
+ref(   scope::LocalScope,     sym::Symbol) = get_getter(scope, sym)()
+assign(scope::LocalScope, x,  sym::Symbol) = get_setter(scope, sym)(x)
+
+function code_getset(sym::Symbol)
+    val = gensym(string(sym))
+    :( ()->$sym, $val->($sym=$val) )
+end
+function code_scope(scope::Symbol, parent, syms)
+    pairs = {expr(:(=>), quot(sym), code_getset(sym)) for sym in syms}
+    :(local $scope = $(quot(LocalScope))($parent, $(expr(typed_dict, 
+        :($(quot(Symbol))=>$(quot((Function,Function)))), pairs...))))
+end
+
+
 # ---- instrument -------------------------------------------------------------
 
-instrument(ex) = instrument_((nothing,quot(nothing)), analyze(ex))
+instrument(ex) = instrument_((nothing,quot(NoScope())), analyze(ex))
 
 instrument_(env, node::Union(Leaf,Line)) = node.ex
 function instrument_(env, ex::Expr)
@@ -173,7 +210,7 @@ function instrument_(env, ex::Block)
         env = (ex.env, env[2])
     else
         name = gensym("env")
-        push(code, :( $name = {$({quot(sym) for sym in syms}...)} ))
+        push(code, code_scope(name, env[2], syms))
         env = (ex.env, name)
     end
     
