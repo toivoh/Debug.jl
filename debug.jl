@@ -60,8 +60,12 @@ type Block
     args::Vector
     env::Env
 end
-type Leaf{T};  ex::T;                           end
-type Line{T};  ex::T; line::Int; file::String;  end
+get_head(ex::Block) = :block
+get_head(ex::Expr)  = ex.head
+
+type Leaf{T};  ex::T;                                end
+type Sym;      ex::Symbol; context::Type; env::Env;  end
+type Line{T};  ex::T; line::Int; file::String;       end
 Line{T}(ex::T, line, file) = Line{T}(ex, line, string(file))
 Line{T}(ex::T, line)       = Line{T}(ex, line, "")
 
@@ -85,8 +89,10 @@ end
 analyze1(states::Vector, ex) = expr(ex.head, analyze1(states, ex.args))
 analyze1(s::State,       ex)                 = Leaf(ex)
 analyze1(s::SimpleState, ex::LineNumberNode) = Line(ex, ex.line)
-analyze1(s::Def, ex::Symbol) = (add(s.env.defined,  ex); Leaf(ex))
-analyze1(s::Lhs, ex::Symbol) = (add(s.env.assigned, ex); Leaf(ex))
+analyze1(s::SimpleState, ex::SymbolNode)     = analyze1(s, ex.name)
+analyze1(s::Def, ex::Symbol) = (add(s.env.defined,  ex); Sym(ex,Def,s.env))
+analyze1(s::Lhs, ex::Symbol) = (add(s.env.assigned, ex); Sym(ex,Lhs,s.env))
+analyze1(s::SimpleState, ex::Symbol) = Sym(ex,typeof(s),s.env)
 
 analyze1(s::SplitDef, ex) = analyze1(Def(s.ls), ex)
 function analyze1(s::SplitDef, ex::Expr)
@@ -182,7 +188,7 @@ end
 
 instrument(ex) = instrument_((nothing,quot(NoScope())), analyze(ex))
 
-instrument_(env, node::Union(Leaf,Line)) = node.ex
+instrument_(env, node::Union(Leaf,Sym,Line)) = node.ex
 function instrument_(env, ex::Expr)
     expr(ex.head, {instrument_(env, arg) for arg in ex.args})
 end
@@ -246,17 +252,31 @@ end
 # ---- debug_eval -------------------------------------------------------------
 
 graft(s::Scope, ex) = ex
-graft(s::Scope, ex::SymbolNode) = graft(s, ex.name)
-function graft(s::Scope, ex::Symbol)
-    has(s, ex) ? :($(quot(get_getter(s, ex)))()) : ex
+function graft(s::Scope, ex::Sym)
+    sym = ex.ex
+    @assert ex.context == Rhs
+    has(s, sym) ? :($(quot(get_getter(s, sym)))()) : sym
 end
-graft(s::Scope, ex::Expr)  = Expr(ex.head, {graft(s,arg) for arg in ex.args})
-graft(s::Scope, ex::Block) = Expr(:block,  {graft(s,arg) for arg in ex.args})
+function graft(s::Scope, ex::Union(Expr, Block))
+    head, args = get_head(ex), ex.args
+    if head == :(=)
+        if isa(args[1], Sym)
+            rhs = graft(s, args[2])
+            sym = args[1].ex
+            @assert args[1].context != Rhs
+            return has(s, sym) ? :($(quot(get_setter(s, sym)))($rhs)) : sym
+        elseif is_expr(args[1], :ref)
+        else error("graft: not implemented: $ex")       
+        end  
+    end
+        
+    expr(head, {graft(s,arg) for arg in args})
+end
 graft(s::Scope, node::Union(Leaf,Line)) = node.ex
 
 #debug_eval(scope::Scope, ex) = eval(graft(scope, ex))
 function debug_eval(scope::Scope, ex)
-     ex2 = graft(scope, ex)
+     ex2 = graft(scope, analyze(ex))
     # @show ex2
      eval(ex2)
 #    eval(graft(scope, ex)) # doesn't work?
