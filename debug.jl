@@ -54,7 +54,10 @@ type Env
     assigned::Set{Symbol}
     processed::Bool
 end
-child(s) = Env(s, Set{Symbol}(), Set{Symbol}(), false)
+child(env) = Env(env, Set{Symbol}(), Set{Symbol}(), false)
+function has(env::Env, sym::Symbol) 
+    has(env.defined, sym) || (isa(env.parent, Env) && has(env.parent, sym))
+end
 
 type Block
     args::Vector
@@ -260,7 +263,9 @@ const updating_ops = {
 graft(s::Scope, ex) = ex
 function graft(s::Scope, ex::Sym)
     sym = ex.ex
-    has(s, sym) ? :($(quot(get_getter(s, sym)))()) : sym
+    if has(ex.env, sym) || !has(s, sym); sym
+    else expr(:call, get_getter(s, sym))
+    end
 end
 function graft(s::Scope, ex::Union(Expr, Block))
     head, args = get_head(ex), ex.args
@@ -269,7 +274,9 @@ function graft(s::Scope, ex::Union(Expr, Block))
         if isa(lhs, Sym)
             rhs = graft(s, rhs)
             sym = lhs.ex
-            return has(s, sym) ? :($(quot(get_setter(s, sym)))($rhs)) : sym
+            if has(lhs.env, sym) || !has(s, sym); return :($sym = $rhs)
+            else return expr(:call, get_setter(s, sym), rhs)
+            end
         elseif is_expr(lhs, :tuple)
             tup = esc(gensym("tuple"))
             return graft(s, expr(:block, 
