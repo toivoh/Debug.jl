@@ -2,8 +2,8 @@
 module Debug
 using Base
 import Base.promote_rule
-import Base.ref, Base.assign
-export trap, instrument, analyze
+import Base.ref, Base.assign, Base.has
+export trap, instrument, analyze, @debug, Scope
 
 macro show(ex)
     quote
@@ -222,6 +222,24 @@ function instrument_(env, ex::Block)
         end
     end
     expr(:block, code)
+end
+
+
+# ---- @debug -----------------------------------------------------------------
+
+macro debug(ex)
+    globalvar = esc(gensym("globalvar"))
+    quote
+        $globalvar = false
+        try
+            global $globalvar
+            $globalvar = true
+        end
+        if !$globalvar
+            error("@debug: must be applied in global scope!")
+        end
+        $(esc(instrument(ex)))
+    end
 end
 
 end # module
