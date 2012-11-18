@@ -63,9 +63,9 @@ end
 get_head(ex::Block) = :block
 get_head(ex::Expr)  = ex.head
 
-type Leaf{T};  ex::T;                                end
-type Sym;      ex::Symbol; context::Type; env::Env;  end
-type Line{T};  ex::T; line::Int; file::String;       end
+type Leaf{T};  ex::T;                           end
+type Sym;      ex::Symbol; env::Env;            end
+type Line{T};  ex::T; line::Int; file::String;  end
 Line{T}(ex::T, line, file) = Line{T}(ex, line, string(file))
 Line{T}(ex::T, line)       = Line{T}(ex, line, "")
 
@@ -90,9 +90,9 @@ analyze1(states::Vector, ex) = expr(ex.head, analyze1(states, ex.args))
 analyze1(s::State,       ex)                 = Leaf(ex)
 analyze1(s::SimpleState, ex::LineNumberNode) = Line(ex, ex.line)
 analyze1(s::SimpleState, ex::SymbolNode)     = analyze1(s, ex.name)
-analyze1(s::Def, ex::Symbol) = (add(s.env.defined,  ex); Sym(ex,Def,s.env))
-analyze1(s::Lhs, ex::Symbol) = (add(s.env.assigned, ex); Sym(ex,Lhs,s.env))
-analyze1(s::SimpleState, ex::Symbol) = Sym(ex,typeof(s),s.env)
+analyze1(s::Def, ex::Symbol) = (add(s.env.defined,  ex); Sym(ex,s.env))
+analyze1(s::Lhs, ex::Symbol) = (add(s.env.assigned, ex); Sym(ex,s.env))
+analyze1(s::SimpleState, ex::Symbol) = Sym(ex,s.env)
 
 analyze1(s::SplitDef, ex) = analyze1(Def(s.ls), ex)
 function analyze1(s::SplitDef, ex::Expr)
@@ -251,10 +251,15 @@ end
 
 # ---- debug_eval -------------------------------------------------------------
 
+const updating_ops = {
+ :+= => :+,   :-= => :-,  :*= => :*,  :/= => :/,  ://= => ://, :.//= => :.//,
+:.*= => :.*, :./= => :./, :\= => :\, :.\= => :.\,  :^= => :^,   :.^= => :.^,
+ :%= => :%,   :|= => :|,  :&= => :&,  :$= => :$,  :<<= => :<<,  :>>= => :>>,
+ :>>>= => :>>>}
+
 graft(s::Scope, ex) = ex
 function graft(s::Scope, ex::Sym)
     sym = ex.ex
-    @assert ex.context == Rhs
     has(s, sym) ? :($(quot(get_getter(s, sym)))()) : sym
 end
 function graft(s::Scope, ex::Union(Expr, Block))
@@ -264,7 +269,6 @@ function graft(s::Scope, ex::Union(Expr, Block))
         if isa(lhs, Sym)
             rhs = graft(s, rhs)
             sym = lhs.ex
-            @assert lhs.context != Rhs
             return has(s, sym) ? :($(quot(get_setter(s, sym)))($rhs)) : sym
         elseif is_expr(lhs, :tuple)
             tup = esc(gensym("tuple"))
@@ -274,6 +278,9 @@ function graft(s::Scope, ex::Union(Expr, Block))
         elseif is_expr(lhs, :ref) || is_expr(lhs, :escape)  # pass down
         else error("graft: not implemented: $ex")       
         end  
+    elseif has(updating_ops, head) # Translate updating ops, e g x+=1 ==> x=x+1
+        op = updating_ops[head]
+        return graft(s, :( $(args[1]) = ($op)($(args[1]), $(args[2])) ))
     elseif head === :escape 
         return ex.args[1]  # bypasses substitution
     end        

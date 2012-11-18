@@ -19,7 +19,7 @@ end
 function trap(line::Int, file, scope::Scope) 
     print(line, ":")
 
-    if (line == 11) debug_eval(scope, :(x   = x+1)) end
+    if (line == 11) debug_eval(scope, :(x += 1)) end
     if (line == 16) debug_eval(scope, :((y,z) = (z,y))) end
 
     if (line > 10)  print("\tx = ", debug_eval(scope, :x)) end
