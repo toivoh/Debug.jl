@@ -260,16 +260,23 @@ end
 function graft(s::Scope, ex::Union(Expr, Block))
     head, args = get_head(ex), ex.args
     if head == :(=)
-        if isa(args[1], Sym)
-            rhs = graft(s, args[2])
-            sym = args[1].ex
-            @assert args[1].context != Rhs
+        lhs, rhs = args
+        if isa(lhs, Sym)
+            rhs = graft(s, rhs)
+            sym = lhs.ex
+            @assert lhs.context != Rhs
             return has(s, sym) ? :($(quot(get_setter(s, sym)))($rhs)) : sym
-        elseif is_expr(args[1], :ref)
+        elseif is_expr(lhs, :tuple)
+            tup = esc(gensym("tuple"))
+            return graft(s, expr(:block, 
+                 :( $tup  = $rhs     ),
+                {:( $dest = $tup[$k] ) for (k,dest)=enumerate(lhs.args)}...))
+        elseif is_expr(lhs, :ref) || is_expr(lhs, :escape)  # pass down
         else error("graft: not implemented: $ex")       
         end  
-    end
-        
+    elseif head === :escape 
+        return ex.args[1]  # bypasses substitution
+    end        
     expr(head, {graft(s,arg) for arg in args})
 end
 graft(s::Scope, node::Union(Leaf,Line)) = node.ex
