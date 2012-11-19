@@ -81,26 +81,26 @@ type SplitDef <: State;  ls::Env; rs::Env;  end
 promote_rule{S<:State,T<:State}(::Type{S},::Type{T}) = State
 
 function analyze(ex)
-    node = analyze1(Rhs(child(nothing)), ex)
+    node = decorate(Rhs(child(nothing)), ex)
     set_source!(node, "")
     node
 end
 
-function analyze1(states::Vector, args::Vector) 
-    {analyze1(s, arg) for (s, arg) in zip(states, args)}
+function decorate(states::Vector, args::Vector) 
+    {decorate(s, arg) for (s, arg) in zip(states, args)}
 end
-analyze1(states::Vector, ex) = expr(ex.head, analyze1(states, ex.args))
-analyze1(s::State,       ex)                 = Leaf(ex)
-analyze1(s::SimpleState, ex::LineNumberNode) = Line(ex, ex.line)
-analyze1(s::SimpleState, ex::SymbolNode)     = analyze1(s, ex.name)
-analyze1(s::Def, ex::Symbol) = (add(s.env.defined,  ex); Sym(ex,s.env))
-analyze1(s::Lhs, ex::Symbol) = (add(s.env.assigned, ex); Sym(ex,s.env))
-analyze1(s::SimpleState, ex::Symbol) = Sym(ex,s.env)
+decorate(states::Vector, ex) = expr(ex.head, decorate(states, ex.args))
+decorate(s::State,       ex)                 = Leaf(ex)
+decorate(s::SimpleState, ex::LineNumberNode) = Line(ex, ex.line)
+decorate(s::SimpleState, ex::SymbolNode)     = decorate(s, ex.name)
+decorate(s::Def, ex::Symbol) = (add(s.env.defined,  ex); Sym(ex,s.env))
+decorate(s::Lhs, ex::Symbol) = (add(s.env.assigned, ex); Sym(ex,s.env))
+decorate(s::SimpleState, ex::Symbol) = Sym(ex,s.env)
 
-analyze1(s::SplitDef, ex) = analyze1(Def(s.ls), ex)
-function analyze1(s::SplitDef, ex::Expr)
-    if (ex.head === :(=)) analyze1([Def(s.ls), Rhs(s.rs)], ex)
-    else                  analyze1(Def(s.ls), ex)
+decorate(s::SplitDef, ex) = decorate(Def(s.ls), ex)
+function decorate(s::SplitDef, ex::Expr)
+    if (ex.head === :(=)) decorate([Def(s.ls), Rhs(s.rs)], ex)
+    else                  decorate(Def(s.ls), ex)
     end
 end
 
@@ -130,15 +130,15 @@ function argstates(state::SimpleState, head, args)
     end
 end
 
-function analyze1(state::SimpleState, ex::Expr)
+function decorate(state::SimpleState, ex::Expr)
     head,  args  = ex.head, ex.args
     if head === :line; return Line(ex, ex.args...)
     elseif contains([:quote, :top, :macrocall, :type], head); return Leaf(ex)
     end
 
     states = argstates(state, head, args)
-    if head === :block; Block(analyze1(states, args), state.env)
-    else                analyze1(states, ex)
+    if head === :block; Block(decorate(states, args), state.env)
+    else                decorate(states, ex)
     end
 end
 

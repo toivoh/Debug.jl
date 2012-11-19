@@ -1,6 +1,6 @@
 load("debug.jl")
 
-module TestTrap
+module TestDebugEval
 using Base, Debug
 import Debug.trap
 
