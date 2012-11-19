@@ -231,4 +231,24 @@ test_decorate(quote
     end
 end)
 
+# types with type parameters
+test_decorate(quote
+    $(@syms P Q)
+    type P{T}
+        $(@syms T)
+        x::T
+    end
+    type Q{S,T} <: Associative{S,T}
+        $(@syms S T)
+        x::T
+    end
+end)
+
+# abstract/typealias with type parameters
+test_decorate(quote
+    $(@syms A X)
+    abstract A{S,T} <: B{($(@syms S T); Int)}
+    typealias X{Q<:Associative{Int,Int},R<:Real} Dict{($(@syms Q R); Int),Int}
+end)
+
 end # module
