@@ -1,21 +1,33 @@
 load("debug.jl")
 
 module TestDebugEval
+export @syms
 using Base, Debug
-import Debug.decorate
 
-abstract Annotation
-decorate(s::SplitDef, a::Annotation) = error("Should not happen")
-decorate(s::State, a::Annotation) = a
+type BlockEnv
+    defined ::Set{Symbol}
+    assigned::Set{Symbol}
 
-type BlockEnv <: Annotation
+    BlockEnv(d, a) = new(Set{Symbol}(d...), Set{Symbol}(a...))
+end
+
+macro syms(args...)
+    if length(args) == 0
+        BlockEnv([],[])
+    elseif Debug.is_expr(args[end], :hcat) || Debug.is_expr(args[end], :vcat)
+        BlockEnv(args[1:end-1], args[end].args)
+    else
+        BlockEnv(args, [])
+    end
 end
 
 code = quote
+    $(@syms [f])
     function f(x::Int)
-        $(BlockEnv())
+        $(@syms x [y])
         y = 0
         while x > 0
+            $(@syms)
             x -= y
             y += 1
         end
@@ -23,10 +35,17 @@ code = quote
     end
 end
 
-reconstruct(node::Annotation) = node
 reconstruct(node::Union(Leaf,Sym,Line)) = node.ex
-function reconstruct(ex::Union(Block,Expr))
-    expr(get_head(ex), {reconstruct(arg) for arg in ex.args})
+reconstruct(ex::Expr) = expr(ex.head, {reconstruct(arg) for arg in ex.args})
+function reconstruct(block::Block)
+    env = block.env
+    for arg in block.args
+        if isa(arg, Leaf{BlockEnv})
+            @assert env.defined == arg.ex.defined
+            @assert (env.assigned - env.defined) == arg.ex.assigned 
+        end
+    end
+    expr(:block, {reconstruct(arg) for arg in block.args})
 end
 
 dcode = analyze(code)
