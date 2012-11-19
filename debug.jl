@@ -125,6 +125,7 @@ function argstates(state::SimpleState, head, args)
     elseif head === :(=);   [(isa(state,Def) ? state : Lhs(e)), Rhs(e)]
     elseif head === :tuple; fill(state,  nargs)
     elseif head === :ref;   fill(Rhs(e), nargs)
+    elseif head === :(...); [state]
     elseif head === doublecolon && nargs == 1; [Rhs(e)]
     elseif head === doublecolon && nargs == 2; [state, Rhs(e)]
     else fill(Rhs(e), nargs)
