@@ -189,11 +189,11 @@ end
 
 # ---- instrument -------------------------------------------------------------
 
-instrument(ex) = instrument_((nothing,quot(NoScope())), analyze(ex))
+instrument(ex) = add_traps((nothing,quot(NoScope())), analyze(ex))
 
-instrument_(env, node::Union(Leaf,Sym,Line)) = node.ex
-function instrument_(env, ex::Expr)
-    expr(ex.head, {instrument_(env, arg) for arg in ex.args})
+add_traps(env, node::Union(Leaf,Sym,Line)) = node.ex
+function add_traps(env, ex::Expr)
+    expr(ex.head, {add_traps(env, arg) for arg in ex.args})
 end
 collect_syms!(syms::Set{Symbol}, ::Nothing, outer) = nothing
 function collect_syms!(syms::Set{Symbol}, s::Env, outer)
@@ -210,7 +210,7 @@ function collect_syms!(syms::Set{Symbol}, s::Env, outer)
     end
     add_each(syms, s.defined)
 end
-function instrument_(env, ex::Block)
+function add_traps(env, ex::Block)
     syms = Set{Symbol}()
     collect_syms!(syms, ex.env, env[1])
     
@@ -224,7 +224,7 @@ function instrument_(env, ex::Block)
     end
     
     for arg in ex.args
-        push(code, instrument_(env, arg))
+        push(code, add_traps(env, arg))
         if isa(arg, Line)
             push(code, :($(quot(trap))($(arg.line), $(quot(arg.file)),
                                        $(env[2]))) )
