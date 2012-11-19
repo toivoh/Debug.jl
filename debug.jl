@@ -79,7 +79,8 @@ type Def <: SimpleState;  env::Env;  end
 type Lhs <: SimpleState;  env::Env;  end
 type Rhs <: SimpleState;  env::Env;  end
 type Typ <: SimpleState;  env::Env;  end
-type SplitDef <: State;  ls::Env; rs::Env;  end
+type Sig      <: State;  s::SimpleState; inner::Env;  end
+type SplitDef <: State;  ls::Env;        rs::Env;     end
 promote_rule{S<:State,T<:State}(::Type{S},::Type{T}) = State
 
 function analyze(ex)
@@ -108,6 +109,13 @@ function decorate(s::SplitDef, ex::Expr)
     end
 end
 
+function decorate(s::Sig, ex::Expr)
+    @assert ex.head === :call
+    states = [(isa(s.s,Def) ? s.s : Lhs(s.s.env)), 
+              fill(Def(s.inner), length(ex.args)-1)]
+    decorate(states, ex)
+end
+
 function decorate(s::Typ, ex::Expr)
     head, args = ex.head, ex.args
     if contains([:function, :(=)], head) && is_expr(args[1], :call)
@@ -127,9 +135,7 @@ function argstates(state::SimpleState, head, args)
     e, nargs = state.env, length(args)
     if contains([:function, :(=)], head) && is_expr(args[1], :call)
         inner = child(e)
-        {[(isa(state,Def) ? state : Lhs(e)), 
-          fill(Def(inner), length(args[1].args)-1)],
-         Rhs(inner)}
+        [Sig(state, inner), Rhs(inner)]
     elseif contains([:function, :(->)], head)
         inner = child(e); [Def(inner), Rhs(inner)]
         
