@@ -183,6 +183,22 @@ test_decorate(quote
     typealias T3 T1    
 end)
 
-
+# type
+test_decorate(quote
+    $(@syms T)
+    type T<:Integer
+        $(@syms c T)
+        x::Int
+        y::Int
+        c(x,y) = begin
+            $(@syms x y)
+            new(x,y)
+        end
+        function T(x)
+            $(@syms x)
+            c(x,2x)
+        end
+    end
+end)
 
 end # module

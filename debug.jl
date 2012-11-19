@@ -56,6 +56,7 @@ type Env
     processed::Bool
 end
 child(env) = Env(env, Set{Symbol}(), Set{Symbol}(), false)
+
 function has(env::Env, sym::Symbol) 
     has(env.defined, sym) || (isa(env.parent, Env) && has(env.parent, sym))
 end
@@ -78,6 +79,7 @@ abstract SimpleState <: State
 type Def <: SimpleState;  env::Env;  end
 type Lhs <: SimpleState;  env::Env;  end
 type Rhs <: SimpleState;  env::Env;  end
+type Typ <: SimpleState;  env::Env;  end
 type SplitDef <: State;  ls::Env; rs::Env;  end
 promote_rule{S<:State,T<:State}(::Type{S},::Type{T}) = State
 
@@ -90,7 +92,8 @@ end
 function decorate(states::Vector, args::Vector) 
     {decorate(s, arg) for (s, arg) in zip(states, args)}
 end
-decorate(states::Vector, ex) = expr(ex.head, decorate(states, ex.args))
+decorate(states::Vector, ex::Expr) = expr(ex.head, decorate(states, ex.args))
+
 decorate(s::State,       ex)                 = Leaf(ex)
 decorate(s::SimpleState, ex::LineNumberNode) = Line(ex, ex.line)
 decorate(s::SimpleState, ex::SymbolNode)     = decorate(s, ex.name)
@@ -101,8 +104,23 @@ decorate(s::SimpleState, ex::Symbol) = Sym(ex,s.env)
 decorate(s::SplitDef, ex) = decorate(Def(s.ls), ex)
 function decorate(s::SplitDef, ex::Expr)
     if     ex.head === :(=);  decorate([Def(s.ls), Rhs(s.rs)], ex)
-    elseif ex.head === :(<:); decorate([s,         Rhs(s.rs)], ex) 
+    elseif ex.head === :(<:); decorate([s,         Rhs(s.rs)], ex)
     else                      decorate(Def(s.ls), ex)
+    end
+end
+
+function decorate(s::Typ, ex::Expr)
+    head, args = ex.head, ex.args
+    if contains([:function, :(=)], head) && is_expr(args[1], :call)
+        decorate(Def(s.env), ex)
+    else
+        # This will disable all scoping, defining and assigning
+        # in the body of the type not caused by method definitions.
+        # Todo: How should e.g. a while loop in a type body be treated?
+        states = fill(s, length(args))
+        if head === :block; Block(decorate(states, args), s.env)
+        else                decorate(states, ex)
+        end
     end
 end
 
@@ -110,7 +128,9 @@ function argstates(state::SimpleState, head, args)
     e, nargs = state.env, length(args)
     if contains([:function, :(=)], head) && is_expr(args[1], :call)
         inner = child(e)
-        {[Lhs(e), fill(Def(inner), length(args[1].args)-1)],Rhs(inner)}
+        {[(isa(state,Def) ? state : Lhs(e)), 
+          fill(Def(inner), length(args[1].args)-1)],
+         Rhs(inner)}
     elseif contains([:function, :(->)], head)
         inner = child(e); [Def(inner), Rhs(inner)]
         
@@ -134,6 +154,7 @@ function argstates(state::SimpleState, head, args)
     # I'm guessing abstract and typealias wrap their args in one scope,
     # except the actual name to be defined
     elseif head === :abstract;  inner=child(e); [SplitDef(e,inner)]
+    elseif head === :type;      inner=child(e); [SplitDef(e,inner), Typ(inner)]
     elseif head === :typealias; inner=child(e); [SplitDef(e,inner), Rhs(inner)]
 
     else fill(Rhs(e), nargs)
@@ -141,9 +162,9 @@ function argstates(state::SimpleState, head, args)
 end
 
 function decorate(state::SimpleState, ex::Expr)
-    head,  args  = ex.head, ex.args
-    if head === :line; return Line(ex, ex.args...)
-    elseif contains([:quote, :top, :macrocall, :type], head); return Leaf(ex)
+    head, args  = ex.head, ex.args
+    if head === :line;                                 return Line(ex, args...)
+    elseif contains([:quote, :top, :macrocall], head); return Leaf(ex)
     end
 
     states = argstates(state, head, args)
