@@ -1,8 +1,16 @@
 load("debug.jl")
 
-module TestDebugEval
+module TestDecorate
 export @syms
 using Base, Debug
+
+macro assert_fails(ex)
+    quote
+        if (try; $(esc(ex)); true; catch e; false; end)
+            error($("@assert_fails: $ex didn't fail!"))
+        end
+    end
+end
 
 type BlockEnv
     defined ::Set{Symbol}
@@ -161,5 +169,20 @@ test_decorate(quote
         z = x*y
     end
 end)
+
+# test that the right hand sides below are really evaluated inside the scope
+@assert_fails eval(:(typealias P{Real} Real))
+@assert_fails eval(:(abstract  Q{Real} <: Real))
+@assert_fails eval(:(type      R{Real} <: Real; end))
+
+# typealias, abstract
+test_decorate(quote
+    $(@syms T1 T2 T3)
+    abstract T1
+    abstract T2 <: Q
+    typealias T3 T1    
+end)
+
+
 
 end # module

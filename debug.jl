@@ -100,8 +100,9 @@ decorate(s::SimpleState, ex::Symbol) = Sym(ex,s.env)
 
 decorate(s::SplitDef, ex) = decorate(Def(s.ls), ex)
 function decorate(s::SplitDef, ex::Expr)
-    if (ex.head === :(=)) decorate([Def(s.ls), Rhs(s.rs)], ex)
-    else                  decorate(Def(s.ls), ex)
+    if     ex.head === :(=);  decorate([Def(s.ls), Rhs(s.rs)], ex)
+    elseif ex.head === :(<:); decorate([s,         Rhs(s.rs)], ex) 
+    else                      decorate(Def(s.ls), ex)
     end
 end
 
@@ -123,11 +124,18 @@ function argstates(state::SimpleState, head, args)
         [Rhs(inner), Rhs(inner), fill(SplitDef(inner,e), nargs-2)]
         
     elseif head === :(=);   [(isa(state,Def) ? state : Lhs(e)), Rhs(e)]
+    elseif head === :(<:);  [(isa(state,Def) ? state : Rhs(e)), Rhs(e)]
     elseif head === :tuple; fill(state,  nargs)
     elseif head === :ref;   fill(Rhs(e), nargs)
     elseif head === :(...); [state]
     elseif head === doublecolon && nargs == 1; [Rhs(e)]
     elseif head === doublecolon && nargs == 2; [state, Rhs(e)]
+
+    # I'm guessing abstract and typealias wrap their args in one scope,
+    # except the actual name to be defined
+    elseif head === :abstract;  inner=child(e); [SplitDef(e,inner)]
+    elseif head === :typealias; inner=child(e); [SplitDef(e,inner), Rhs(inner)]
+
     else fill(Rhs(e), nargs)
     end
 end
