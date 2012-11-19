@@ -149,6 +149,22 @@ test_decorate(quote
     end
 end)
 
+# dict comprehensions
+test_decorate(quote
+    let
+        $(@syms [a])
+        [($(@syms x y); x*y=>z) for x=($(@syms [a]); 1:5), y=(a=5; 1:3)]
+    end
+    let
+        $(@syms [a])
+        {($(@syms x y); x*y=>z) for x=($(@syms [a]); 1:5), y=(a=5; 1:3)}
+    end
+    let
+        $(@syms [a])
+        (b=5;Int=>Int)[($(@syms x [b]); x=>z) for x=($(@syms [a]); a=5; 1:5)]
+    end
+end)
+
 # functions
 test_decorate(quote
     $(@syms [f1 f2 f3 f4])

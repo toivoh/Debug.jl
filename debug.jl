@@ -37,14 +37,13 @@ get_linenumber(ex::LineNumberNode) = ex.line
 get_sourcefile(ex::Expr)           = string(ex.args[2])
 
 const doublecolon = symbol("::")
-const typed_comprehension = symbol("typed-comprehension")
-const typed_dict          = symbol("typed-dict")
+const dict_comprehension        = symbol("dict-comprehension")
+const typed_comprehension       = symbol("typed-comprehension")
+const typed_dict                = symbol("typed-dict")
+const typed_dict_comprehension  = symbol("typed-dict-comprehension")
 
-
-function replicate_last{T}(v::Vector{T}, n)
-    if n < length(v)-1; error("replicate_last: cannot shrink v more!"); end
-    [v[1:end-1], fill(v[end], n+1-length(v))]
-end
+const untyped_comprehensions = [:comprehension, dict_comprehension]
+const typed_comprehensions =   [typed_comprehension, typed_dict_comprehension]
 
 
 # ---- analyze ----------------------------------------------------------------
@@ -138,9 +137,9 @@ function argstates(state::SimpleState, head, args)
     elseif head === :while;                [Rhs(e), Rhs(child(e))]
     elseif head === :try; ec = child(e);   [Rhs(child(e)), Def(ec),Rhs(ec)]
     elseif head === :for; inner = child(e);[SplitDef(inner,e), Rhs(inner)]
-    elseif contains([:let, :comprehension], head); inner = child(e); 
+    elseif contains([untyped_comprehensions, :let], head); inner = child(e); 
         [Rhs(inner), fill(SplitDef(inner,e), nargs-1)]
-    elseif head === typed_comprehension; inner = child(e)
+    elseif contains(typed_comprehensions, head); inner = child(e)
         [Rhs(inner), Rhs(inner), fill(SplitDef(inner,e), nargs-2)]
         
     elseif head === :(=);   [(isa(state,Def) ? state : Lhs(e)), Rhs(e)]
