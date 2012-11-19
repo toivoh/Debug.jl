@@ -110,9 +110,11 @@ function decorate(s::SplitDef, ex::Expr)
 end
 
 function decorate(s::Sig, ex::Expr)
-    @assert ex.head === :call
-    states = [(isa(s.s,Def) ? s.s : Lhs(s.s.env)), 
-              fill(Def(s.inner), length(ex.args)-1)]
+    @assert contains([:call, :curly], ex.head)
+    if is_expr(ex.args[1], :curly) first = s;
+    else; first = (isa(s.s,Def) ? s.s : Lhs(s.s.env));
+    end
+    states = [first, fill(Def(s.inner), length(ex.args)-1)]
     decorate(states, ex)
 end
 

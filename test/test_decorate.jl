@@ -186,6 +186,20 @@ test_decorate(quote
     end
 end)
 
+# functions with type parameters
+test_decorate(quote
+    $(@syms [f g])
+    function f{S,T<:Int}(x::S, y::T)
+        $(@syms S T x y)
+        (x, y)
+    end
+    g{S,T<:Int}(x::S, y::T) = begin
+        $(@syms S T x y)
+        (x, y)
+    end
+end)
+
+
 # test that the right hand sides below are really evaluated inside the scope
 @assert_fails eval(:(typealias P{Real} Real))
 @assert_fails eval(:(abstract  Q{Real} <: Real))
