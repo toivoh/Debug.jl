@@ -4,6 +4,7 @@ using Base
 import Base.promote_rule
 import Base.ref, Base.assign, Base.has
 export trap, instrument, analyze, @debug, Scope, graft, debug_eval
+export decorate, Leaf, Line, Sym, Block, get_head
 
 macro show(ex)
     quote
