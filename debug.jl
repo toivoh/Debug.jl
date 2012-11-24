@@ -109,7 +109,7 @@ decorate(s::SplitDef, ex) = decorate(Def(s.ls), ex)
 function decorate(s::SplitDef, ex::Expr)
     head, nargs = ex.head, length(ex.args)
     if     head === :(=);   decorate([Def(s.ls), Rhs(s.rs)],                ex)
-    elseif head === :(<:);  decorate([s,         Rhs(s.rs)],                ex)
+    elseif head === :(<:);  decorate([s,         Rhs(s.ls)],                ex)
     elseif head === :curly; decorate([s,         fill(Def(s.rs), nargs-1)], ex)
     else                    decorate(Def(s.ls), ex)
     end

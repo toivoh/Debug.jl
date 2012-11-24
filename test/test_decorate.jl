@@ -215,8 +215,8 @@ end)
 
 # type
 test_decorate(quote
-    $(@syms T)
-    type T<:Integer
+    $(@syms T [a])
+    type T<:(a=3; Integer)
         $(@syms c T)
         x::Int
         y::Int
@@ -247,7 +247,7 @@ end)
 # abstract/typealias with type parameters
 test_decorate(quote
     $(@syms A X)
-    abstract A{S,T} <: B{($(@syms S T); Int)}
+    abstract A{S,T} <: B{($(@syms A X); Int)}
     typealias X{Q<:Associative{Int,Int},R<:Real} Dict{($(@syms Q R); Int),Int}
 end)
 
