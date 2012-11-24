@@ -149,7 +149,7 @@ function argstates(state::SimpleState, head, args)
     elseif contains([untyped_comprehensions, :let], head); inner = child(e); 
         [Rhs(inner), fill(SplitDef(inner,e), nargs-1)]
     elseif contains(typed_comprehensions, head); inner = child(e)
-        [Rhs(inner), Rhs(inner), fill(SplitDef(inner,e), nargs-2)]
+        [Rhs(e), Rhs(inner), fill(SplitDef(inner,e), nargs-2)]
         
     elseif head === :(=);   [(isa(state,Def) ? state : Lhs(e)), Rhs(e)]
     elseif head === :(<:);  [(isa(state,Def) ? state : Rhs(e)), Rhs(e)]

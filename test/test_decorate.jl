@@ -144,8 +144,8 @@ test_decorate(quote
         {($(@syms x y); x*y+z) for x=($(@syms [a]); 1:5), y=(a=5; 1:3)}
     end
     let
-        $(@syms [a])
-        (b=5;Int)[($(@syms x [b]); x+z) for x=($(@syms [a]); a=5; 1:5)]
+        $(@syms [a b])
+        (b=5;Int)[($(@syms x); x+z) for x=($(@syms [a b]); a=5; 1:5)]
     end
 end)
 
@@ -160,8 +160,8 @@ test_decorate(quote
         {($(@syms x y); x*y=>z) for x=($(@syms [a]); 1:5), y=(a=5; 1:3)}
     end
     let
-        $(@syms [a])
-        (b=5;Int=>Int)[($(@syms x [b]); x=>z) for x=($(@syms [a]); a=5; 1:5)]
+        $(@syms [a b])
+        (b=5;Int=>Int)[($(@syms x); x=>z) for x=($(@syms [a b]); a=5; 1:5)]
     end
 end)
 
