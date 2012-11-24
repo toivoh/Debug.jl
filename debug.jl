@@ -44,8 +44,16 @@ const typed_dict_comprehension  = symbol("typed-dict-comprehension")
 const untyped_comprehensions = [:comprehension, dict_comprehension]
 const typed_comprehensions =   [typed_comprehension, typed_dict_comprehension]
 
+# ---- analyze(): decorate and then propagate source file info among Line's ---
+function analyze(ex)
+    node = decorate(Rhs(child(nothing)), ex)
+    set_source!(node, "")
+    node
+end
 
-# ---- analyze ----------------------------------------------------------------
+# ---- decorate(): add scoping info to AST ------------------------------------
+# Rewrites AST, exchanging some Expr:s etc for Block/Sym/Leaf/Line
+# to include scope/other relevant info and to classify nodes.
 
 ## Env: analysis-time scope ##
 type Env
@@ -59,7 +67,7 @@ function has(env::Env, sym::Symbol)
     has(env.defined, sym) || (isa(env.parent, Env) && has(env.parent, sym))
 end
 
-# -- Extended AST nodes that can be produced by decorate in addition to Expr --
+# ---- Extended AST nodes that can be produced by decorate() ------------------
 type Block;    args::Vector; env::Env;          end # :block with Env
 type Sym;      ex::Symbol;   env::Env;          end # Symbol with Env
 type Leaf{T};  ex::T;                           end # Unexpanded node
@@ -69,30 +77,15 @@ Line{T}(ex::T, line)       = Line{T}(ex, line, "")
 get_head(ex::Block) = :block
 get_head(ex::Expr)  = ex.head
 
-# ---- decorate() node visit states ----
+# ---- decorate() ----
 abstract State
-abstract SimpleState <: State
 promote_rule{S<:State,T<:State}(::Type{S},::Type{T}) = State
 
-type Def      <: SimpleState;  env::Env;  end  # definition, e.g. inside local
-type Lhs      <: SimpleState;  env::Env;  end  # e.g. to the left of =
-type Rhs      <: SimpleState;  env::Env;  end  # plain evaluation
-type Typ      <: SimpleState;  env::Env;  end  # inside type. todo: better way?
-# Sig: :call/:curly node in e.g. function f(x) ... / f(x) = ...
-type Sig      <: State;  s::SimpleState; inner::Env;  end
-# SplitDef: Def with different scopes for left and right side, e.g.
-# let x_inner = y_outer
-# type T_outer{S_inner} <: Q
-type SplitDef <: State;  ls::Env;        rs::Env;     end
+abstract SimpleState <: State
+type Def <: SimpleState;  env::Env;  end  # definition, e.g. inside local
+type Lhs <: SimpleState;  env::Env;  end  # e.g. to the left of =
+type Rhs <: SimpleState;  env::Env;  end  # plain evaluation
 
-# decorate and propagate source file info among Line's
-function analyze(ex)
-    node = decorate(Rhs(child(nothing)), ex)
-    set_source!(node, "")
-    node
-end
-
-# ---- decorate: rewrite AST to include scoping info ----
 function decorate(states::Vector, args::Vector) 
     {decorate(s, arg) for (s, arg) in zip(states, args)}
 end
@@ -105,25 +98,8 @@ decorate(s::Def, ex::Symbol) = (add(s.env.defined,  ex); Sym(ex,s.env))
 decorate(s::Lhs, ex::Symbol) = (add(s.env.assigned, ex); Sym(ex,s.env))
 decorate(s::SimpleState, ex::Symbol) = Sym(ex,s.env)
 
-decorate(s::SplitDef, ex) = decorate(Def(s.ls), ex)
-function decorate(s::SplitDef, ex::Expr)
-    head, nargs = ex.head, length(ex.args)
-    if     head === :(=);   decorate([Def(s.ls), Rhs(s.rs)],                ex)
-    elseif head === :(<:);  decorate([s,         Rhs(s.ls)],                ex)
-    elseif head === :curly; decorate([s,         fill(Def(s.rs), nargs-1)], ex)
-    else                    decorate(Def(s.ls), ex)
-    end
-end
-
-function decorate(s::Sig, ex::Expr)
-    @assert contains([:call, :curly], ex.head)
-    if is_expr(ex.args[1], :curly) first = s;
-    else; first = (isa(s.s,Def) ? s.s : Lhs(s.s.env));
-    end
-    states = [first, fill(Def(s.inner), length(ex.args)-1)]
-    decorate(states, ex)
-end
-
+# Typ: inside type. todo: better way?
+type Typ <: SimpleState;  env::Env;  end
 function decorate(s::Typ, ex::Expr)
     head, args = ex.head, ex.args
     if contains([:function, :(=)], head) && is_expr(args[1], :call)
@@ -139,13 +115,44 @@ function decorate(s::Typ, ex::Expr)
     end
 end
 
+# SplitDef: Def with different scopes for left and right side, e.g.
+# let x_inner = y_outer
+# type T_outer{S_inner} <: Q_outer
+type SplitDef <: State;
+    ls::Env;
+    rs::Env;
+end
+decorate(s::SplitDef, ex) = decorate(Def(s.ls), ex)
+function decorate(s::SplitDef, ex::Expr)
+    head, nargs = ex.head, length(ex.args)
+    if     head === :(=);   decorate([Def(s.ls), Rhs(s.rs)],                ex)
+    elseif head === :(<:);  decorate([s,         Rhs(s.ls)],                ex)
+    elseif head === :curly; decorate([s,         fill(Def(s.rs), nargs-1)], ex)
+    else                    decorate(Def(s.ls), ex)
+    end
+end
+
+# Sig: (part of) function signature in function f(x) ... / f(x) = ...
+type Sig  <: State; 
+    s::SimpleState;  # state with outer Env, to define/assign f
+    inner::Env;      # Env inside the method
+end
+function decorate(s::Sig, ex::Expr)
+    @assert contains([:call, :curly], ex.head)
+    if is_expr(ex.args[1], :curly) first = s;
+    else; first = (isa(s.s,Def) ? s.s : Lhs(s.s.env));
+    end
+    states = [first, fill(Def(s.inner), length(ex.args)-1)]
+    decorate(states, ex)
+end
+
+# return a Vector of visit states for each arg of an expr(head, args)
 function argstates(state::SimpleState, head, args)
     e, nargs = state.env, length(args)
     if contains([:function, :(=)], head) && is_expr(args[1], :call)
-        inner = child(e)
-        [Sig(state, inner), Rhs(inner)]
+        inner = child(e); [Sig(state, inner), Rhs(inner)]
     elseif contains([:function, :(->)], head)
-        inner = child(e); [Def(inner), Rhs(inner)]
+        inner = child(e); [Def(inner),        Rhs(inner)]
         
     elseif contains([:global, :local], head); fill(Def(e), nargs)
     elseif head === :while;                [Rhs(e), Rhs(child(e))]
@@ -186,6 +193,7 @@ function decorate(state::SimpleState, ex::Expr)
     end
 end
 
+# ---- set_source!(): propagate source info in a decorated AST ----------------
 set_source!(ex,       file::String) = nothing
 set_source!(ex::Line, file::String) = (ex.file = file)
 function set_source!(ex::Union(Expr,Block), file::String)
