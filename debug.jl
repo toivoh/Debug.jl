@@ -36,7 +36,6 @@ get_linenumber(ex::Expr)           = ex.args[1]
 get_linenumber(ex::LineNumberNode) = ex.line
 get_sourcefile(ex::Expr)           = string(ex.args[2])
 
-const doublecolon = symbol("::")
 const dict_comprehension        = symbol("dict-comprehension")
 const typed_comprehension       = symbol("typed-comprehension")
 const typed_dict                = symbol("typed-dict")
@@ -157,8 +156,8 @@ function argstates(state::SimpleState, head, args)
     elseif head === :tuple; fill(state,  nargs)
     elseif head === :ref;   fill(Rhs(e), nargs)
     elseif head === :(...); [state]
-    elseif head === doublecolon && nargs == 1; [Rhs(e)]
-    elseif head === doublecolon && nargs == 2; [state, Rhs(e)]
+    elseif head === :(::) && nargs == 1; [Rhs(e)]
+    elseif head === :(::) && nargs == 2; [state, Rhs(e)]
 
     # I'm guessing abstract and typealias wrap their args in one scope,
     # except the actual name to be defined
