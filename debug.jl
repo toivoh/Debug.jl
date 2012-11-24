@@ -47,47 +47,52 @@ const typed_comprehensions =   [typed_comprehension, typed_dict_comprehension]
 
 # ---- analyze ----------------------------------------------------------------
 
+## Env: analysis-time scope ##
 type Env
     parent::Union(Env,Nothing)
     defined::Set{Symbol}
     assigned::Set{Symbol}
-    processed::Bool
+    processed::Bool  # todo: better way to handle assigned pass?
 end
 child(env) = Env(env, Set{Symbol}(), Set{Symbol}(), false)
-
 function has(env::Env, sym::Symbol) 
     has(env.defined, sym) || (isa(env.parent, Env) && has(env.parent, sym))
 end
 
-type Block
-    args::Vector
-    env::Env
-end
-get_head(ex::Block) = :block
-get_head(ex::Expr)  = ex.head
-
-type Leaf{T};  ex::T;                           end
-type Sym;      ex::Symbol; env::Env;            end
+# -- Extended AST nodes that can be produced by decorate in addition to Expr --
+type Block;    args::Vector; env::Env;          end # :block with Env
+type Sym;      ex::Symbol;   env::Env;          end # Symbol with Env
+type Leaf{T};  ex::T;                           end # Unexpanded node
 type Line{T};  ex::T; line::Int; file::String;  end
 Line{T}(ex::T, line, file) = Line{T}(ex, line, string(file))
 Line{T}(ex::T, line)       = Line{T}(ex, line, "")
+get_head(ex::Block) = :block
+get_head(ex::Expr)  = ex.head
 
+# ---- decorate() node visit states ----
 abstract State
 abstract SimpleState <: State
-type Def <: SimpleState;  env::Env;  end
-type Lhs <: SimpleState;  env::Env;  end
-type Rhs <: SimpleState;  env::Env;  end
-type Typ <: SimpleState;  env::Env;  end
-type Sig      <: State;  s::SimpleState; inner::Env;  end
-type SplitDef <: State;  ls::Env;        rs::Env;     end
 promote_rule{S<:State,T<:State}(::Type{S},::Type{T}) = State
 
+type Def      <: SimpleState;  env::Env;  end  # definition, e.g. inside local
+type Lhs      <: SimpleState;  env::Env;  end  # e.g. to the left of =
+type Rhs      <: SimpleState;  env::Env;  end  # plain evaluation
+type Typ      <: SimpleState;  env::Env;  end  # inside type. todo: better way?
+# Sig: :call/:curly node in e.g. function f(x) ... / f(x) = ...
+type Sig      <: State;  s::SimpleState; inner::Env;  end
+# SplitDef: Def with different scopes for left and right side, e.g.
+# let x_inner = y_outer
+# type T_outer{S_inner} <: Q
+type SplitDef <: State;  ls::Env;        rs::Env;     end
+
+# decorate and propagate source file info among Line's
 function analyze(ex)
     node = decorate(Rhs(child(nothing)), ex)
     set_source!(node, "")
     node
 end
 
+# ---- decorate: rewrite AST to include scoping info ----
 function decorate(states::Vector, args::Vector) 
     {decorate(s, arg) for (s, arg) in zip(states, args)}
 end
