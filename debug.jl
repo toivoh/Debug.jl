@@ -4,19 +4,9 @@ using Base
 import Base.promote_rule
 import Base.ref, Base.assign, Base.has
 export trap, instrument, analyze, @debug, Scope, graft, debug_eval, @show
-#export Leaf, Line, Sym, Block
 
 include("AST.jl")
 using AST
-
-macro show(ex)
-    quote
-        print($(string(ex,"\t= ")))
-        show($(esc(ex)))
-        println()
-    end
-end
-
 
 trap(args...) = error("No debug trap installed for ", typeof(args))
 
