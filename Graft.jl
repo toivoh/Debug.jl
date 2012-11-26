@@ -149,7 +149,8 @@ function graft(s::Scope, ex::Union(Expr, Block))
         elseif is_expr(lhs, :ref) || isa(lhs, Leaf)  # pass down
         else error("graft: not implemented: $ex")       
         end  
-    elseif has(updating_ops, head) # Translate updating ops, e g x+=1 ==> x=x+1
+    elseif has(updating_ops, head) && isa(args[1], Sym)
+        # Translate updating ops, e g x+=1 ==> x=x+1        
         op = updating_ops[head]
         return graft(s, :( $(args[1]) = ($op)($(args[1]), $(args[2])) ))
     end        
