@@ -142,18 +142,16 @@ function graft(s::Scope, ex::Union(Expr, Block))
                 end
             end
         elseif is_expr(lhs, :tuple)
-            tup = esc(gensym("tuple"))
+            tup = Leaf(gensym("tuple")) # don't recurse into it
             return graft(s, expr(:block, 
                  :( $tup  = $rhs     ),
                 {:( $dest = $tup[$k] ) for (k,dest)=enumerate(lhs.args)}...))
-        elseif is_expr(lhs, :ref) || is_expr(lhs, :escape)  # pass down
+        elseif is_expr(lhs, :ref) || isa(lhs, Leaf)  # pass down
         else error("graft: not implemented: $ex")       
         end  
     elseif has(updating_ops, head) # Translate updating ops, e g x+=1 ==> x=x+1
         op = updating_ops[head]
         return graft(s, :( $(args[1]) = ($op)($(args[1]), $(args[2])) ))
-    elseif head === :escape 
-        return ex.args[1]  # bypasses substitution
     end        
     expr(head, {graft(s,arg) for arg in args})
 end
