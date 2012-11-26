@@ -7,22 +7,30 @@ module AST
 using Base
 import Base.has
 
-export Env, child
+export Env, LocalEnv, NoEnv, child, add_assigned, add_defined
 export Leaf, Line, Sym, Block
 export get_head
 
 
 # ---- Env: analysis-time scope -----------------------------------------------
-type Env
-    parent::Union(Env,Nothing)
+
+abstract Env
+type NoEnv    <: Env; end
+type LocalEnv <: Env
+    parent::Env
     defined::Set{Symbol}
     assigned::Set{Symbol}
     processed::Bool  # todo: better way to handle assigned pass?
 end
-child(env) = Env(env, Set{Symbol}(), Set{Symbol}(), false)
-function has(env::Env, sym::Symbol) 
-    has(env.defined, sym) || (isa(env.parent, Env) && has(env.parent, sym))
-end
+child(env::Env) = LocalEnv(env, Set{Symbol}(), Set{Symbol}(), false)
+
+has(env::NoEnv,    sym::Symbol) = false
+has(env::LocalEnv, sym::Symbol) = has(env.defined,sym) || has(env.parent,sym)
+
+add_defined( ::NoEnv, ::Symbol) = nothing
+add_assigned(::NoEnv, ::Symbol) = nothing
+add_defined( env::LocalEnv, sym::Symbol) = add(env.defined,  sym)
+add_assigned(env::LocalEnv, sym::Symbol) = add(env.assigned, sym)
 
 
 # ---- Extended AST nodes that can be produced by decorate() ------------------

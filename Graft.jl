@@ -72,12 +72,12 @@ add_traps(env, node::Union(Leaf,Sym,Line)) = node.ex
 function add_traps(env, ex::Expr)
     expr(ex.head, {add_traps(env, arg) for arg in ex.args})
 end
-collect_syms!(syms::Set{Symbol}, ::Nothing, outer) = nothing
-function collect_syms!(syms::Set{Symbol}, s::Env, outer)
+collect_syms!(syms::Set{Symbol}, ::NoEnv, outer) = nothing
+function collect_syms!(syms::Set{Symbol}, s::LocalEnv, outer)
     if is(s, outer); return; end
     collect_syms!(syms, s.parent, outer)
     if !s.processed
-        if isa(s.parent, Env)
+        if isa(s.parent, LocalEnv)
             s.defined  = s.defined | (s.assigned - s.parent.assigned)
             s.assigned = s.defined | s.parent.assigned
         else

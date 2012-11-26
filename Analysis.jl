@@ -56,8 +56,8 @@ decorate(states::Vector, ex::Expr) = expr(ex.head, decorate(states, ex.args))
 decorate(s::State,       ex)                 = Leaf(ex)
 decorate(s::SimpleState, ex::LineNumberNode) = Line(ex, ex.line)
 decorate(s::SimpleState, ex::SymbolNode)     = decorate(s, ex.name)
-decorate(s::Def, ex::Symbol) = (add(s.env.defined,  ex); Sym(ex,s.env))
-decorate(s::Lhs, ex::Symbol) = (add(s.env.assigned, ex); Sym(ex,s.env))
+decorate(s::Def, ex::Symbol) = (add_defined( s.env, ex); Sym(ex,s.env))
+decorate(s::Lhs, ex::Symbol) = (add_assigned(s.env, ex); Sym(ex,s.env))
 decorate(s::SimpleState, ex::Symbol) = Sym(ex,s.env)
 
 # Typ: inside type. todo: better way?
@@ -168,7 +168,7 @@ end
 
 # ---- analyze(): decorate and then propagate source file info among Line's ---
 
-analyze(ex) = analyze(Rhs(child(nothing)), ex)
+analyze(ex) = analyze(Rhs(child(NoEnv())), ex)
 function analyze(s::State, ex)
     node = decorate(s, ex)
     set_source!(node, "")
