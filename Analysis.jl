@@ -36,14 +36,6 @@ const untyped_comprehensions = [:comprehension, dict_comprehension]
 const typed_comprehensions =   [typed_comprehension, typed_dict_comprehension]
 
 
-# ---- analyze(): decorate and then propagate source file info among Line's ---
-function analyze(ex)
-    node = decorate(Rhs(child(nothing)), ex)
-    set_source!(node, "")
-    node
-end
-
-
 # ---- decorate(): add scoping info to AST ------------------------------------
 # Rewrites AST, exchanging some Expr:s etc for Block/Sym/Leaf/Line
 # to include scope/other relevant info and to classify nodes.
@@ -171,6 +163,16 @@ function set_source!(ex::Union(Expr,Block), file::String)
         if isa(arg, Line) && arg.file != ""; file = arg.file; end
         set_source!(arg, file)
     end
+end
+
+
+# ---- analyze(): decorate and then propagate source file info among Line's ---
+
+analyze(ex) = analyze(Rhs(child(nothing)), ex)
+function analyze(s::State, ex)
+    node = decorate(s, ex)
+    set_source!(node, "")
+    node
 end
 
 end # module
