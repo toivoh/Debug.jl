@@ -1,8 +1,8 @@
-load("debug.jl")
+include("debug.jl")
 
 module TestDecorate
 export @syms
-using Base, Debug
+using Base, Debug, Debug.AST
 
 macro assert_fails(ex)
     quote

@@ -4,7 +4,10 @@ using Base
 import Base.promote_rule
 import Base.ref, Base.assign, Base.has
 export trap, instrument, analyze, @debug, Scope, graft, debug_eval, @show
-export Leaf, Line, Sym, Block
+#export Leaf, Line, Sym, Block
+
+include("AST.jl")
+using AST
 
 macro show(ex)
     quote
@@ -55,29 +58,6 @@ end
 # Rewrites AST, exchanging some Expr:s etc for Block/Sym/Leaf/Line
 # to include scope/other relevant info and to classify nodes.
 
-## Env: analysis-time scope ##
-type Env
-    parent::Union(Env,Nothing)
-    defined::Set{Symbol}
-    assigned::Set{Symbol}
-    processed::Bool  # todo: better way to handle assigned pass?
-end
-child(env) = Env(env, Set{Symbol}(), Set{Symbol}(), false)
-function has(env::Env, sym::Symbol) 
-    has(env.defined, sym) || (isa(env.parent, Env) && has(env.parent, sym))
-end
-
-# ---- Extended AST nodes that can be produced by decorate() ------------------
-type Block;    args::Vector; env::Env;          end # :block with Env
-type Sym;      ex::Symbol;   env::Env;          end # Symbol with Env
-type Leaf{T};  ex::T;                           end # Unexpanded node
-type Line{T};  ex::T; line::Int; file::String;  end
-Line{T}(ex::T, line, file) = Line{T}(ex, line, string(file))
-Line{T}(ex::T, line)       = Line{T}(ex, line, "")
-get_head(ex::Block) = :block
-get_head(ex::Expr)  = ex.head
-
-# ---- decorate() ----
 abstract State
 promote_rule{S<:State,T<:State}(::Type{S},::Type{T}) = State
 

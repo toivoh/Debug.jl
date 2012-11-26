@@ -1,4 +1,4 @@
-load("debug.jl")
+include("debug.jl")
 
 module TestDebugEval
 using Base, Debug
