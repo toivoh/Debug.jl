@@ -18,8 +18,10 @@ trap(args...) = error("No debug trap installed for ", typeof(args))
 
 quot(ex) = expr(:quote, ex)
 
-is_expr(ex,       head::Symbol)   = false
+is_expr(ex,       head)           = false
 is_expr(ex::Expr, head::Symbol)   = ex.head == head
+is_expr(ex::Expr, heads::Set)     = has(heads, ex.head)
+is_expr(ex::Expr, heads::Vector)  = contains(heads, ex.head)
 is_expr(ex, head::Symbol, n::Int) = is_expr(ex, head) && length(ex.args) == n
 
 const typed_dict                = symbol("typed-dict")
@@ -146,7 +148,7 @@ function graft(s::Scope, ex::Union(Expr, Block))
             return graft(s, expr(:block, 
                  :( $tup  = $rhs     ),
                 {:( $dest = $tup[$k] ) for (k,dest)=enumerate(lhs.args)}...))
-        elseif is_expr(lhs, :ref) || isa(lhs, Leaf)  # pass down
+        elseif is_expr(lhs, [:ref, :.]) || isa(lhs, Leaf)  # pass down
         else error("graft: not implemented: $ex")       
         end  
     elseif has(updating_ops, head) && isa(args[1], Sym)
