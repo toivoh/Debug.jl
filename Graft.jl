@@ -1,8 +1,8 @@
 
 #   Debug.Graft:
 # ================
-# Debug instrumentation of code and transforming AST to act as if they were
-# evaluated inside such code (grafting)
+# Debug instrumentation of code, and transformation of ASTs to act as if they
+# were evaluated inside such code (grafting)
 
 module Graft
 using Base, AST
@@ -61,6 +61,8 @@ end
 
 
 # ---- instrument -------------------------------------------------------------
+# Add Scope creation and debug traps to (analyzed) code
+# A call to trap() is added after every AST.Line (expr(:line) / LineNumberNode)
 
 instrument(ex) = add_traps((nothing,quot(NoScope())), ex)
 
@@ -108,6 +110,10 @@ end
 
 
 # ---- graft ------------------------------------------------------------------
+# Rewrite an (analyzed) AST to work as if it were inside
+# the given scope, when evaluated in global scope. 
+# Replaces reads and writes to variables from that scope 
+# with getter/setter calls.
 
 const updating_ops = {
  :+= => :+,   :-= => :-,  :*= => :*,  :/= => :/,  ://= => ://, :.//= => :.//,
@@ -129,8 +135,11 @@ function graft(s::Scope, ex::Union(Expr, Block))
         if isa(lhs, Sym)
             rhs = graft(s, rhs)
             sym = lhs.ex
-            if has(lhs.env, sym) || !has(s, sym); return :($sym = $rhs)
-            else return expr(:call, get_setter(s, sym), rhs)
+            if has(lhs.env, sym); return :($sym = $rhs)
+            else
+                if has(s, sym); return expr(:call, get_setter(s, sym), rhs)
+                else; error("No setter in scope found for $sym!")
+                end
             end
         elseif is_expr(lhs, :tuple)
             tup = esc(gensym("tuple"))
