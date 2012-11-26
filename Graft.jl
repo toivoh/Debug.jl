@@ -8,7 +8,7 @@ module Graft
 using Base, AST
 import Base.ref, Base.assign, Base.has
 
-export trap, Scope
+export trap, Scope, NoScope, LocalScope
 
 
 trap(args...) = error("No debug trap installed for ", typeof(args))
@@ -123,14 +123,14 @@ const updating_ops = {
  :%= => :%,   :|= => :|,  :&= => :&,  :$= => :$,  :<<= => :<<,  :>>= => :>>,
  :>>>= => :>>>}
 
-graft(s::Scope, ex) = ex
-function graft(s::Scope, ex::Sym)
+graft(s::LocalScope, ex) = ex
+function graft(s::LocalScope, ex::Sym)
     sym = ex.ex
     if has(ex.env, sym) || !has(s, sym); sym
     else expr(:call, get_getter(s, sym))
     end
 end
-function graft(s::Scope, ex::Union(Expr, Block))
+function graft(s::LocalScope, ex::Union(Expr, Block))
     head, args = get_head(ex), ex.args
     if head == :(=)
         lhs, rhs = args
@@ -158,7 +158,7 @@ function graft(s::Scope, ex::Union(Expr, Block))
     end        
     expr(head, {graft(s,arg) for arg in args})
 end
-graft(s::Scope, node::Union(Leaf,Line)) = node.ex
+graft(s::LocalScope, node::Union(Leaf,Line)) = node.ex
 
 
 end # module

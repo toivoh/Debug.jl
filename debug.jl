@@ -29,7 +29,8 @@ macro debug(ex)
 end
 
 #debug_eval(scope::Scope, ex) = eval(graft(scope, ex))
-function debug_eval(scope::Scope, ex)
+debug_eval(scope::NoScope, ex) = eval(ex)
+function debug_eval(scope::LocalScope, ex)
     ex2 = graft(scope, ex)
     eval(ex2)
 #     eval(graft(scope, ex)) # doesn't work?
