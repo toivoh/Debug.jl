@@ -3,6 +3,7 @@ include("debug.jl")
 module TestDecorate
 export @syms
 using Base, Debug, Debug.AST, Debug.Analysis
+const is_expr = Debug.Analysis.is_expr
 
 macro assert_fails(ex)
     quote
@@ -22,7 +23,7 @@ end
 macro syms(args...)
     if length(args) == 0
         BlockEnv([],[])
-    elseif Debug.is_expr(args[end], :hcat) || Debug.is_expr(args[end], :vcat)
+    elseif is_expr(args[end], :hcat) || is_expr(args[end], :vcat)
         BlockEnv(args[1:end-1], args[end].args)
     else
         BlockEnv(args, [])

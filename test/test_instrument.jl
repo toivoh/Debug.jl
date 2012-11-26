@@ -14,12 +14,12 @@ code = quote
     end
 end
 
-icode = instrument(code)
+icode = Debug.instrument(code)
 println(icode, '\n')
 
 eval(icode)()
 
-println(instrument(quote
+println(Debug.instrument(quote
     global g1::String, g2
     local l
     i::Int = 1
