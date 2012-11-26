@@ -66,14 +66,14 @@ end
 # Add Scope creation and debug traps to (analyzed) code
 # A call to trap() is added after every AST.Line (expr(:line) / LineNumberNode)
 
-instrument(ex) = add_traps((nothing,quot(NoScope())), ex)
+instrument(ex) = add_traps((NoEnv(),quot(NoScope())), ex)
 
 add_traps(env, node::Union(Leaf,Sym,Line)) = node.ex
 function add_traps(env, ex::Expr)
     expr(ex.head, {add_traps(env, arg) for arg in ex.args})
 end
-collect_syms!(syms::Set{Symbol}, ::NoEnv, outer) = nothing
-function collect_syms!(syms::Set{Symbol}, s::LocalEnv, outer)
+collect_syms!(syms::Set{Symbol}, ::NoEnv, outer::Env) = nothing
+function collect_syms!(syms::Set{Symbol}, s::LocalEnv, outer::Env)
     if is(s, outer); return; end
     collect_syms!(syms, s.parent, outer)
     add_each(syms, s.defined)
@@ -83,7 +83,7 @@ function add_traps(env, ex::Block)
     collect_syms!(syms, ex.env, env[1])
     
     code = {}
-    if isempty(syms)
+    if is(ex.env, env[1])
         env = (ex.env, env[2])
     else
         name = gensym("env")
