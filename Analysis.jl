@@ -155,7 +155,9 @@ function decorate(state::SimpleState, ex::Expr)
     end
 end
 
-# ---- set_source!(): propagate source info in a decorated AST ----------------
+# ---- post-decoration processing ---------------------------------------------
+
+## set_source!(): propagate source file info ##
 set_source!(ex,       file::String) = nothing
 set_source!(ex::Line, file::String) = (ex.file = file)
 function set_source!(ex::Union(Expr,Block), file::String)
@@ -165,13 +167,31 @@ function set_source!(ex::Union(Expr,Block), file::String)
     end
 end
 
+## postprocess_env!: find defined symbols among assigned ##
+postprocess_env!(envs::Set{LocalEnv}, ex) = nothing
+postprocess_env!(envs::Set{LocalEnv}, ex::Sym) = postprocess_env!(envs, ex.env)
+function postprocess_env!(envs::Set{LocalEnv}, ex::Union(Expr,Block))
+    if isa(ex, Block);  postprocess_env!(envs, ex.env); end
+    for arg in ex.args; postprocess_env!(envs, arg);    end
+end
+
+postprocess_env!(envs::Set{LocalEnv}, ::NoEnv) = nothing
+function postprocess_env!(envs::Set{LocalEnv}, env::LocalEnv)
+    if has(envs, env); return; end
+    add(envs, env)
+    p = env.parent
+    p_assigned = isa(p, LocalEnv) ? p.assigned : Set{None}()
+    env.defined  = env.defined | (env.assigned - p_assigned)
+    env.assigned = env.defined | p_assigned
+end
 
 # ---- analyze(): decorate and then propagate source file info among Line's ---
 
-analyze(ex) = analyze(Rhs(NoEnv()), ex)
-function analyze(s::State, ex)
+analyze(ex, process_envs::Bool) = analyze(Rhs(NoEnv()), ex, process_envs)
+function analyze(s::State, ex, process_envs::Bool)
     node = decorate(s, ex)
     set_source!(node, "")
+    if process_envs; postprocess_env!(Set{LocalEnv}(), node); end
     node
 end
 

@@ -9,8 +9,8 @@ include("Graft.jl")
 using AST, Analysis, Graft
 
 # tie together Analysis and Graft
-instrument(ex)          = Graft.instrument(analyze(ex))
-graft(scope::Scope, ex) = Graft.graft(scope, analyze(ex))
+instrument(ex)          = Graft.instrument(  analyze(ex, true))
+graft(scope::Scope, ex) = Graft.graft(scope, analyze(ex, false))
 
 
 macro debug(ex)

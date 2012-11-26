@@ -51,7 +51,7 @@ function reconstruct(block::Block)
 end
 
 function test_decorate(code)
-    dcode = analyze(Debug.Analysis.Rhs(child(NoEnv())), code)
+    dcode = analyze(Debug.Analysis.Rhs(child(NoEnv())), code, false)
     rcode = reconstruct(dcode)
     @assert rcode == code
 end

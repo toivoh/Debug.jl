@@ -76,15 +76,6 @@ collect_syms!(syms::Set{Symbol}, ::NoEnv, outer) = nothing
 function collect_syms!(syms::Set{Symbol}, s::LocalEnv, outer)
     if is(s, outer); return; end
     collect_syms!(syms, s.parent, outer)
-    if !s.processed
-        if isa(s.parent, LocalEnv)
-            s.defined  = s.defined | (s.assigned - s.parent.assigned)
-            s.assigned = s.defined | s.parent.assigned
-        else
-            s.defined  = s.defined | s.assigned
-            s.assigned = s.defined
-        end
-    end
     add_each(syms, s.defined)
 end
 function add_traps(env, ex::Block)
@@ -140,7 +131,7 @@ function graft(s::LocalScope, ex::Union(Expr, Block))
             if has(lhs.env, sym); return :($sym = $rhs)
             else
                 if has(s, sym); return expr(:call, get_setter(s, sym), rhs)
-                else; error("No setter in scope found for $sym!")
+                else; error("No setter in scope found for $(sym)!")
                 end
             end
         elseif is_expr(lhs, :tuple)
