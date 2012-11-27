@@ -3,11 +3,11 @@ module Debug
 using Base
 export @debug, debug_eval, Scope
 
-include("AST.jl")
-include("Analysis.jl")
-include("Graft.jl")
-include("Eval.jl")
-include("Trap.jl")
+include(find_in_path("Debug/src/AST.jl"))
+include(find_in_path("Debug/src/Analysis.jl"))
+include(find_in_path("Debug/src/Graft.jl"))
+include(find_in_path("Debug/src/Eval.jl"))
+include(find_in_path("Debug/src/Trap.jl"))
 using AST, Analysis, Graft, Eval, Trap
 
 macro debug(args...)

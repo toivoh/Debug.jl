@@ -1,4 +1,4 @@
-include("Debug.jl")
+include(find_in_path("Debug.jl"))
 
 module TestDebugEval
 using Base, Debug
