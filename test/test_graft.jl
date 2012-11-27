@@ -13,11 +13,8 @@ end
 macro test_graft(ex)
     stem, grafts = cut_grafts(ex)
     grafts = tuple(grafts...)  # make grafts work as just a value
-    @gensym trap
-    code = esc(quote
-        $trap(line, file, scope) = debug_eval(scope, $(quot(grafts))[line])
-        $(Debug.instrument(trap, stem))
-    end)
+    trap = (line, file, scope)->debug_eval(scope, grafts[line])    
+    code = Debug.instrument(quot(trap), stem)
     @show code
     code
 end
@@ -41,11 +38,46 @@ function cut_grafts!(grafts::Vector, ex::Expr)
     expr(ex.head, code)
 end
 
+type T
+    x
+    y
+end
+
 @test_graft begin
     let
+        # test read and write, both ways
         local x = 11
         @graft (@assert x == 11; x = 2)
         @assert x == 2
+
+        # test tuple assignment in graft
+        local y, z 
+        @graft y, z = 12, 23 
+        @assert (y, z) == (12, 23)
+
+        # test updating operator in graft
+        q = 3
+        @graft q += 5
+        @assert q == 8
+
+        # test assignment to ref in graft (don't rewrite)
+        a = [1:5]
+        @graft a[2]  = 45
+        @graft a[3] += 1
+        @assert isequal(a, [1,45,4,4,5])
+
+        # test assignment to field in graft (don't rewrite)
+        t = T(7,83)
+        @graft t.x  = 71
+        @graft t.y -= 2
+        @assert (t.x == 71) && (t.y == 81)
+
+        # test that k inside the grafted let block is separated from k outside
+        k = 21
+        @graft let k=5
+            @assert k == 5
+        end
+        @assert k == 21
     end
 end
 
