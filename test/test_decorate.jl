@@ -49,7 +49,7 @@ function reconstruct(block::Block)
 end
 
 function test_decorate(code)
-    dcode = analyze(Debug.Analysis.Rhs(child(NoEnv())), code, false)
+    dcode = analyze(NoEnv(), code, false)
     rcode = reconstruct(dcode)
     @assert rcode == code
 end
@@ -59,7 +59,7 @@ macro test_decorate(ex)
     end
 end
 
-@test_decorate begin
+@test_decorate let
     $(@syms [f])
     function f(x::Int)
         $(@syms x [y])
@@ -77,7 +77,7 @@ end
 # ---- scoping tests ----------------------------------------------------------
 
 # symbol defining/assigning constructs
-@test_decorate begin
+@test_decorate let
     $(@syms)
     let
         $(@syms d1 d2 d3 d4 d5 [a1 a2 a3 a4])
@@ -96,7 +96,7 @@ end
 end
 
 # while
-@test_decorate begin
+@test_decorate let
     $(@syms [i])
     i=1
     while ($(@syms [i]); i < 3) # condition evaluated in outside scope
@@ -108,7 +108,7 @@ end
 end
 
 # try
-@test_decorate begin
+@test_decorate let
     try
         $(@syms x)    
         local x
@@ -119,7 +119,7 @@ end
 end
 
 # for
-@test_decorate begin
+@test_decorate let
     $(@syms [a])
     for x=(a=11; 1:n)
         $(@syms x [x2])
@@ -129,7 +129,7 @@ end
 end
 
 # let
-@test_decorate begin
+@test_decorate let
     $(@syms [a])
     let x, y=3, z::Int, u::Int=11, v=(a=11; 23)
         $(@syms x y z u v)
@@ -137,7 +137,7 @@ end
 end
 
 # comprehensions
-@test_decorate begin
+@test_decorate let
     let
         $(@syms [a])
         [($(@syms x y); x*y+z) for x=($(@syms [a]); 1:5), y=(a=5; 1:3)]
@@ -153,7 +153,7 @@ end
 end
 
 # dict comprehensions
-@test_decorate begin
+@test_decorate let
     let
         $(@syms [a])
         [($(@syms x y); x*y=>z) for x=($(@syms [a]); 1:5), y=(a=5; 1:3)]
@@ -169,7 +169,7 @@ end
 end
 
 # functions
-@test_decorate begin
+@test_decorate let
     $(@syms [f1 f2 f3 f4])
     function f1(x, y::(w=3; Int), args...)
         $(@syms x y args [z w])
@@ -190,7 +190,7 @@ end
 end
 
 # functions with type parameters
-@test_decorate begin
+@test_decorate let
     $(@syms [f g])
     function f{S,T<:Int}(x::S, y::T)
         $(@syms S T x y)
@@ -209,7 +209,7 @@ end
 @assert_fails eval(:(type      R{Real} <: Real; end))
 
 # typealias, abstract
-@test_decorate begin
+@test_decorate let
     $(@syms T1 T2 T3)
     abstract T1
     abstract T2 <: Q
@@ -217,7 +217,7 @@ end
 end
 
 # type
-@test_decorate begin
+@test_decorate let
     $(@syms T [a])
     type T<:(a=3; Integer)
         $(@syms c T)
@@ -235,7 +235,7 @@ end
 end
 
 # types with type parameters
-@test_decorate begin
+@test_decorate let
     $(@syms P Q)
     type P{T}
         $(@syms T)
@@ -248,7 +248,7 @@ end
 end
 
 # abstract/typealias with type parameters
-@test_decorate begin
+@test_decorate let
     $(@syms A X)
     abstract A{S,T} <: B{($(@syms A X); Int)}
     typealias X{Q<:Associative{Int,Int},R<:Real} Dict{($(@syms Q R); Int),Int}
