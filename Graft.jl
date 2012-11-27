@@ -106,12 +106,11 @@ const updating_ops = {
  :%= => :%,   :|= => :|,  :&= => :&,  :$= => :$,  :<<= => :<<,  :>>= => :>>,
  :>>>= => :>>>}
 
-graft(s::LocalScope, ex) = ex
+graft(s::LocalScope, ex)                     = ex
+graft(s::LocalScope, node::Union(Leaf,Line)) = node.ex
 function graft(s::LocalScope, ex::Sym)
     sym = ex.ex
-    if has(ex.env, sym) || !has(s, sym); sym
-    else expr(:call, get_getter(s, sym))
-    end
+    (has(s, sym) && !has(ex.env, sym)) ? expr(:call, get_getter(s, sym)) : sym
 end
 function graft(s::LocalScope, ex::Union(Expr, Block))
     head, args = get_head(ex), ex.args
@@ -121,14 +120,12 @@ function graft(s::LocalScope, ex::Union(Expr, Block))
             rhs = graft(s, rhs)
             sym = lhs.ex
             if has(lhs.env, sym); return :($sym = $rhs)
-            else
-                if has(s, sym); return expr(:call, get_setter(s, sym), rhs)
-                else; error("No setter in scope found for $(sym)!")
-                end
+            elseif has(s, sym);   return expr(:call, get_setter(s, sym), rhs)
+            else; error("No setter in scope found for $(sym)!")
             end
         elseif is_expr(lhs, :tuple)
             tup = Leaf(gensym("tuple")) # don't recurse into it
-            return graft(s, expr(:block, 
+            return graft(s, expr(:block,
                  :( $tup  = $rhs     ),
                 {:( $dest = $tup[$k] ) for (k,dest)=enumerate(lhs.args)}...))
         elseif is_expr(lhs, [:ref, :.]) || isa(lhs, Leaf)  # pass down
@@ -141,7 +138,5 @@ function graft(s::LocalScope, ex::Union(Expr, Block))
     end        
     expr(head, {graft(s,arg) for arg in args})
 end
-graft(s::LocalScope, node::Union(Leaf,Line)) = node.ex
-
 
 end # module
