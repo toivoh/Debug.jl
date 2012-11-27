@@ -43,8 +43,8 @@ end
 
 @test_graft begin
     let
-        local x = 1
-        @graft x = 2
+        local x = 11
+        @graft (@assert x == 11; x = 2)
         @assert x == 2
     end
 end

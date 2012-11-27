@@ -145,8 +145,9 @@ end
 
 function decorate(state::SimpleState, ex::Expr)
     head, args  = ex.head, ex.args
-    if head === :line;                                 return Line(ex, args...)
-    elseif contains([:quote, :top, :macrocall], head); return Leaf(ex)
+    if head === :line;                     return Line(ex, args...)
+    elseif contains([:quote, :top], head); return Leaf(ex)
+    elseif head === :macrocall; return decorate(state, macroexpand(ex))
     end
 
     states = argstates(state, head, args)
