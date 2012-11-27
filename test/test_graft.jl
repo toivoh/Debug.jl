@@ -14,9 +14,7 @@ macro test_graft(ex)
     stem, grafts = cut_grafts(ex)
     grafts = tuple(grafts...)  # make grafts work as just a value
     trap = (line, file, scope)->debug_eval(scope, grafts[line])    
-    code = Debug.instrument(quot(trap), stem)
-    @show code
-    code
+    Debug.instrument(quot(trap), stem)
 end
 
 cut_grafts(ex) = (grafts = {}; (cut_grafts!(grafts, ex), grafts))
