@@ -78,6 +78,18 @@ end
             @assert k == 5
         end
         @assert k == 21
+
+        # test that assignments to local vars don't leak out
+        @graft let
+            l = 3
+        end
+
+        # test that assignements to shared vars do leak out
+        s = 1
+        @graft let
+            s = 6
+        end
+        @assert s == 6
     end
 end
 
