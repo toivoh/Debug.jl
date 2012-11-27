@@ -32,16 +32,14 @@ const typed_dict                = symbol("typed-dict")
 abstract Scope
 
 type NoScope <: Scope; end
-has(scope::NoScope, sym::Symbol) = false
-
 type LocalScope <: Scope
     parent::Scope
     syms::Dict
 end
 
-function has(scope::LocalScope, sym::Symbol)
-    has(scope.syms, sym) || has(scope.parent, sym)
-end
+has(s::NoScope,    sym::Symbol) = false
+has(s::LocalScope, sym::Symbol) = has(s.syms, sym) || has(s.parent, sym)
+
 function get_entry(scope::LocalScope, sym::Symbol)
     has(scope.syms, sym) ? scope.syms[sym] : get_entry(scope.parent, sym)
 end
@@ -55,9 +53,9 @@ function code_getset(sym::Symbol)
     val = gensym(string(sym))
     :( ()->$sym, $val->($sym=$val) )
 end
-function code_scope(scope::Symbol, parent, syms)
+function code_scope(scopesym::Symbol, parent, syms)
     pairs = {expr(:(=>), quot(sym), code_getset(sym)) for sym in syms}
-    :(local $scope = $(quot(LocalScope))($parent, $(expr(typed_dict, 
+    :(local $scopesym = $(quot(LocalScope))($parent, $(expr(typed_dict, 
         :($(quot(Symbol))=>$(quot((Function,Function)))), pairs...))))
 end
 
