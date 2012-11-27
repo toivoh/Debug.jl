@@ -43,6 +43,8 @@ function reconstruct(block::Block)
             if !(just_assigned == arg.ex.assigned)
                 error("just_assigned = $(just_assigned) != $(arg.ex.assigned)")
             end
+        elseif isa(arg, Leaf{NoEnv})
+            @assert isa(env, NoEnv)
         end
     end
     expr(:block, {reconstruct(arg) for arg in block.args})
@@ -72,7 +74,6 @@ end
         y
     end
 end
-
 
 # ---- scoping tests ----------------------------------------------------------
 
@@ -252,6 +253,21 @@ end
     $(@syms A X)
     abstract A{S,T} <: B{($(@syms A X); Int)}
     typealias X{Q<:Associative{Int,Int},R<:Real} Dict{($(@syms Q R); Int),Int}
+end
+
+# global/local scope
+const noenv = NoEnv()
+@test_decorate begin
+    $(noenv)
+    begin
+        $(noenv)        
+    end
+    for x=($(noenv); 1:3)
+        $(@syms x)
+    end
+    let y=($(noenv); 1)
+        $(@syms y)
+    end
 end
 
 end # module
