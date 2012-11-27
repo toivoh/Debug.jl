@@ -66,11 +66,11 @@ end
 # Add Scope creation and debug traps to (analyzed) code
 # A call to trap() is added after every AST.Line (expr(:line) / LineNumberNode)
 
-instrument(ex) = add_traps((NoEnv(),quot(NoScope())), ex)
+instrument(ex) = instrument((NoEnv(),quot(NoScope())), ex)
 
-add_traps(env, node::Union(Leaf,Sym,Line)) = node.ex
-function add_traps(env, ex::Expr)
-    expr(ex.head, {add_traps(env, arg) for arg in ex.args})
+instrument(env, node::Union(Leaf,Sym,Line)) = node.ex
+function instrument(env, ex::Expr)
+    expr(ex.head, {instrument(env, arg) for arg in ex.args})
 end
 collect_syms!(syms::Set{Symbol}, ::NoEnv, outer::Env) = nothing
 function collect_syms!(syms::Set{Symbol}, s::LocalEnv, outer::Env)
@@ -78,7 +78,7 @@ function collect_syms!(syms::Set{Symbol}, s::LocalEnv, outer::Env)
     collect_syms!(syms, s.parent, outer)
     add_each(syms, s.defined)
 end
-function add_traps(env, ex::Block)
+function instrument(env, ex::Block)
     syms = Set{Symbol}()
     collect_syms!(syms, ex.env, env[1])
     
@@ -92,7 +92,7 @@ function add_traps(env, ex::Block)
     end
     
     for arg in ex.args
-        push(code, add_traps(env, arg))
+        push(code, instrument(env, arg))
         if isa(arg, Line)
             push(code, :($(quot(trap))($(arg.line), $(quot(arg.file)),
                                        $(env[2]))) )
