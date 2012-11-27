@@ -20,9 +20,8 @@ type LocalEnv <: Env
     parent::Env
     defined::Set{Symbol}
     assigned::Set{Symbol}
-    processed::Bool  # todo: better way to handle assigned pass?
 end
-child(env::Env) = LocalEnv(env, Set{Symbol}(), Set{Symbol}(), false)
+child(env::Env) = LocalEnv(env, Set{Symbol}(), Set{Symbol}())
 
 has(env::NoEnv,    sym::Symbol) = false
 has(env::LocalEnv, sym::Symbol) = has(env.defined,sym) || has(env.parent,sym)
