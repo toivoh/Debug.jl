@@ -32,6 +32,7 @@ type NoScope <: Scope; end
 type LocalScope <: Scope
     parent::Scope
     syms::Dict
+    env::Env
 end
 
 has(s::NoScope,    sym::Symbol) = false
@@ -46,16 +47,6 @@ setter(scope::LocalScope, sym::Symbol) = get_entry( scope, sym)[2]
 ref(   scope::LocalScope,     sym::Symbol) = getter(scope, sym)()
 assign(scope::LocalScope, x,  sym::Symbol) = setter(scope, sym)(x)
 
-function code_getset(sym::Symbol)
-    val = gensym(string(sym))
-    :( ()->$sym, $val->($sym=$val) )
-end
-function code_scope(scopesym::Symbol, parent, syms)
-    pairs = {expr(:(=>), quot(sym), code_getset(sym)) for sym in syms}
-    :(local $scopesym = $(quot(LocalScope))($parent, $(expr(typed_dict, 
-        :($(quot(Symbol))=>$(quot((Function,Function)))), pairs...))))
-end
-
 
 # ---- instrument -------------------------------------------------------------
 # Add Scope creation and debug traps to (analyzed) code
@@ -65,6 +56,20 @@ type Context
     trap_ex
     env::Env
     scope_ex
+end
+
+function code_getset(sym::Symbol)
+    val = gensym(string(sym))
+    :( ()->$sym, $val->($sym=$val) )
+end
+function code_scope(scopesym::Symbol, parent, env::Env, syms)
+    pairs = {expr(:(=>), quot(sym), code_getset(sym)) for sym in syms}
+    :(local $scopesym = $(quot(LocalScope))(
+        $parent, 
+        $(expr(typed_dict, :($(quot(Symbol))=>$(quot((Function,Function)))), 
+            pairs...)),
+        $(quot(env))
+    ))
 end
 
 function instrument(trap_ex, ex)
@@ -82,7 +87,7 @@ function instrument(c::Context, ex::Block)
         while !is(e, c.env);  add_each(syms, e.defined); e = e.parent;  end
 
         name = gensym("scope")
-        push(code, code_scope(name, c.scope_ex, syms))
+        push(code, code_scope(name, c.scope_ex, ex.env, syms))
         c = Context(c.trap_ex, ex.env, name)
     end
     
@@ -122,7 +127,7 @@ function graft(s::LocalScope, ex::Union(Expr, Block))
         if isa(lhs, Sym)             # assignment to symbol
             rhs = graft(s, rhs)
             sym = lhs.ex
-            if has(lhs.env, sym); return :($sym = $rhs)
+            if has(lhs.env, sym) || !has(s.env.assigned, sym); return :($sym = $rhs)
             elseif has(s, sym);   return expr(:call, quot(setter(s,sym)), rhs)
             else; error("No setter in scope found for $(sym)!")
             end
