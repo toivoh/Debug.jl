@@ -43,54 +43,52 @@ type T
     y
 end
 
-@test_graft begin
-    let
-        # test read and write, both ways
-        local x = 11
-        @graft (@assert x == 11; x = 2)
-        @assert x == 2
-
-        # test tuple assignment in graft
-        local y, z 
-        @graft y, z = 12, 23 
-        @assert (y, z) == (12, 23)
-
-        # test updating operator in graft
-        q = 3
-        @graft q += 5
-        @assert q == 8
-
-        # test assignment to ref in graft (don't rewrite)
-        a = [1:5]
-        @graft a[2]  = 45
-        @graft a[3] += 1
-        @assert isequal(a, [1,45,4,4,5])
-
-        # test assignment to field in graft (don't rewrite)
-        t = T(7,83)
-        @graft t.x  = 71
-        @graft t.y -= 2
-        @assert (t.x == 71) && (t.y == 81)
-
-        # test that k inside the grafted let block is separated from k outside
-        k = 21
-        @graft let k=5
-            @assert k == 5
-        end
-        @assert k == 21
-
-        # test that assignments to local vars don't leak out
-        @graft let
-            l = 3
-        end
-
-        # test that assignements to shared vars do leak out
-        s = 1
-        @graft let
-            s = 6
-        end
-        @assert s == 6
+@test_graft let
+    # test read and write, both ways
+    local x = 11
+    @graft (@assert x == 11; x = 2)
+    @assert x == 2
+    
+    # test tuple assignment in graft
+    local y, z 
+    @graft y, z = 12, 23 
+    @assert (y, z) == (12, 23)
+    
+    # test updating operator in graft
+    q = 3
+    @graft q += 5
+    @assert q == 8
+    
+    # test assignment to ref in graft (don't rewrite)
+    a = [1:5]
+    @graft a[2]  = 45
+    @graft a[3] += 1
+    @assert isequal(a, [1,45,4,4,5])
+    
+    # test assignment to field in graft (don't rewrite)
+    t = T(7,83)
+    @graft t.x  = 71
+    @graft t.y -= 2
+    @assert (t.x == 71) && (t.y == 81)
+    
+    # test that k inside the grafted let block is separated from k outside
+    k = 21
+    @graft let k=5
+        @assert k == 5
     end
+    @assert k == 21
+    
+    # test that assignments to local vars don't leak out
+    @graft let
+        l = 3
+    end
+    
+    # test that assignements to shared vars do leak out
+    s = 1
+    @graft let
+        s = 6
+    end
+    @assert s == 6
 end
 
 end # module
