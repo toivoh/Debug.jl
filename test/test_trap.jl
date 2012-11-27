@@ -2,11 +2,11 @@ include("debug.jl")
 
 module TestTrap
 using Base, Debug
-import Debug.trap
+
+trap(args...) = nothing
 
 
-
-@debug function f(n)
+@debug trap function f(n)
     x = 0  # this must be line #10
     for k=1:n
         x += k

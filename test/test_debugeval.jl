@@ -2,11 +2,11 @@ include("debug.jl")
 
 module TestDebugEval
 using Base, Debug
-import Debug.trap
+
+trap(args...) = nothing
 
 
-
-@debug function f(n)
+@debug trap function f(n)
     x = 0       # line 10
     for k=1:n   # line 11
         x += k  # line 12
