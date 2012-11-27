@@ -1,7 +1,7 @@
 
 module Debug
 using Base
-export trap, @debug, debug_eval, Scope
+export @debug, debug_eval, Scope
 
 include("AST.jl")
 include("Analysis.jl")
@@ -14,8 +14,9 @@ macro debug(args...)
     code_debug(args...)
 end
 
-code_debug(ex) = code_debug(quot(trap), ex)
-function code_debug(trap_ex, ex)
+code_debug(ex) = code_debug(quot(enter_debug), quot(trap), ex)
+code_debug(trap_ex, ex) = code_debug(quot(()->nothing), trap_ex, ex)
+function code_debug(enter_ex, trap_ex, ex)
     globalvar = esc(gensym("globalvar"))
     @gensym trap
     quote
@@ -28,7 +29,7 @@ function code_debug(trap_ex, ex)
             error("@debug: must be applied in global scope!")
         end
         const $(esc(trap)) = $(esc(trap_ex))
-        $(quot(()->(global dostep = true)))()
+        $enter_ex()
         $(esc(instrument(trap, ex)))
     end
 end

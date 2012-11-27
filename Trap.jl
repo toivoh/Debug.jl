@@ -5,9 +5,9 @@
 
 module Trap
 using Base, Eval
-export trap
+export enter_debug, trap
 
-global dostep = true
+enter_debug() = (global dostep = true)
 function trap(line::Int, file, scope::Scope)
     global dostep
     if !dostep; return; end
