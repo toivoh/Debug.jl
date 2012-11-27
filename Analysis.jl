@@ -12,7 +12,7 @@ export analyze, quot
 
 # ---- Helpers ----------------------------------------------------------------
 
-quot(ex) = expr(:quote, ex)
+quot(ex) = expr(:quote, {ex})
 
 is_expr(ex,       head::Symbol)   = false
 is_expr(ex::Expr, head::Symbol)   = ex.head == head

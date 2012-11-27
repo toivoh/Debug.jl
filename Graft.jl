@@ -13,7 +13,7 @@ export Scope, NoScope, LocalScope
 
 # ---- Helpers ----------------------------------------------------------------
 
-quot(ex) = expr(:quote, ex)
+quot(ex) = expr(:quote, {ex})
 
 is_expr(ex,       head)           = false
 is_expr(ex::Expr, head::Symbol)   = ex.head == head
@@ -119,23 +119,22 @@ function graft(s::LocalScope, ex::Union(Expr, Block))
     head, args = get_head(ex), ex.args
     if head == :(=)
         lhs, rhs = args
-        if isa(lhs, Sym)
+        if isa(lhs, Sym)             # assignment to symbol
             rhs = graft(s, rhs)
             sym = lhs.ex
             if has(lhs.env, sym); return :($sym = $rhs)
             elseif has(s, sym);   return expr(:call, quot(setter(s,sym)), rhs)
             else; error("No setter in scope found for $(sym)!")
             end
-        elseif is_expr(lhs, :tuple)
-            tup = Leaf(gensym("tuple")) # don't recurse into it
+        elseif is_expr(lhs, :tuple)  # assignment to tuple
+            tup = Leaf(gensym("tuple")) # don't recurse into tup
             return graft(s, expr(:block,
                  :( $tup  = $rhs     ),
                 {:( $dest = $tup[$k] ) for (k,dest)=enumerate(lhs.args)}...))
-        elseif is_expr(lhs, [:ref, :.]) || isa(lhs, Leaf)  # pass down
+        elseif is_expr(lhs, [:ref, :.]) || isa(lhs, Leaf) # need no lhs rewrite
         else error("graft: not implemented: $ex")       
         end  
-    elseif has(updating_ops, head) && isa(args[1], Sym)
-        # Translate updating ops, e g x+=1 ==> x=x+1        
+    elseif has(updating_ops, head) && isa(args[1], Sym)  # x+=y ==> x=x+y etc.
         op = updating_ops[head]
         return graft(s, :( $(args[1]) = ($op)($(args[1]), $(args[2])) ))
     end        
