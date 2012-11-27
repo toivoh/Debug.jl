@@ -189,6 +189,7 @@ end
 # ---- analyze(): decorate and then propagate source file info among Line's ---
 
 analyze(ex, process_envs::Bool) = analyze(Rhs(NoEnv()), ex, process_envs)
+analyze(env::Env, ex, process_envs::Bool) = analyze(Rhs(env), ex, process_envs)
 function analyze(s::State, ex, process_envs::Bool)
     node = decorate(s, ex)
     set_source!(node, "")
