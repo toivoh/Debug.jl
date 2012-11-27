@@ -1,7 +1,7 @@
 include("debug.jl")
 
 module TestInstrument
-using Base, Debug
+using Base, Debug, Debug.Analysis
 import Debug.trap
 
 trap(line, file, scope) = println("trap: line = $line, file = $(repr(file))")
@@ -14,12 +14,12 @@ code = quote
     end
 end
 
-icode = Debug.instrument(code)
+icode = Debug.instrument(quot(trap), code)
 println(icode, '\n')
 
 eval(icode)()
 
-println(Debug.instrument(quote
+println(Debug.instrument(quot(trap), quote
     global g1::String, g2
     local l
     i::Int = 1

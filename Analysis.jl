@@ -7,7 +7,7 @@ module Analysis
 using Base, AST
 import Base.promote_rule
 
-export analyze
+export analyze, quot
 
 
 # ---- Helpers ----------------------------------------------------------------

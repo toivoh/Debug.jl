@@ -8,10 +8,7 @@ module Graft
 using Base, AST
 import Base.ref, Base.assign, Base.has
 
-export trap, Scope, NoScope, LocalScope
-
-
-trap(args...) = error("No debug trap installed for ", typeof(args))
+export Scope, NoScope, LocalScope
 
 
 # ---- Helpers ----------------------------------------------------------------
@@ -64,28 +61,36 @@ end
 # Add Scope creation and debug traps to (analyzed) code
 # A call to trap() is added after every AST.Line (expr(:line) / LineNumberNode)
 
-instrument(ex) = instrument((NoEnv(),quot(NoScope())), ex)
-
-instrument(env, node::Union(Leaf,Sym,Line)) = node.ex
-function instrument(env, ex::Expr)
-    expr(ex.head, {instrument(env, arg) for arg in ex.args})
+type Context
+    trap_ex
+    env::Env
+    scope_ex
 end
-function instrument(env, ex::Block)
+
+function instrument(trap_ex, ex)
+    instrument(Context(trap_ex, NoEnv(), quot(NoScope())), ex)
+end
+
+instrument(c::Context, node::Union(Leaf,Sym,Line)) = node.ex
+function instrument(c::Context, ex::Expr)
+    expr(ex.head, {instrument(c, arg) for arg in ex.args})
+end
+function instrument(c::Context, ex::Block)
     code = {}
-    if !is(ex.env, env[1])
+    if !is(ex.env, c.env)
         syms, e = Set{Symbol}(), ex.env
-        while !is(e, env[1]);  add_each(syms, e.defined); e = e.parent;  end
+        while !is(e, c.env);  add_each(syms, e.defined); e = e.parent;  end
 
         name = gensym("scope")
-        push(code, code_scope(name, env[2], syms))
-        env = (ex.env, name)
+        push(code, code_scope(name, c.scope_ex, syms))
+        c = Context(c.trap_ex, ex.env, name)
     end
     
     for arg in ex.args
-        push(code, instrument(env, arg))
+        push(code, instrument(c, arg))
         if isa(arg, Line)
-            push(code, :($(quot(trap))($(arg.line), $(quot(arg.file)),
-                                       $(env[2]))) )
+            push(code, :($(c.trap_ex)($(arg.line), $(quot(arg.file)),
+                                      $(c.scope_ex))) )
         end
     end
     expr(:block, code)

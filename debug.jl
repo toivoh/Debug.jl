@@ -8,9 +8,12 @@ include("Analysis.jl")
 include("Graft.jl")
 using AST, Analysis, Graft
 
+
+trap(args...) = error("No debug trap installed for ", typeof(args))
+
 # tie together Analysis and Graft
-instrument(ex)          = Graft.instrument(  analyze(ex, true))
-graft(scope::Scope, ex) = Graft.graft(scope, analyze(ex, false))
+instrument(trap_ex, ex) = Graft.instrument(trap_ex, analyze(ex, true))
+graft(scope::Scope, ex) = Graft.graft(scope,        analyze(ex, false))
 
 
 macro debug(ex)
@@ -24,7 +27,7 @@ macro debug(ex)
         if !$globalvar
             error("@debug: must be applied in global scope!")
         end
-        $(esc(instrument(ex)))
+        $(esc(instrument(quot(trap), ex)))
     end
 end
 
