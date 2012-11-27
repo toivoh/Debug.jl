@@ -6,6 +6,14 @@ using Base, Debug, Debug.Analysis
 const is_expr = Debug.Analysis.is_expr
 export cut_grafts, @test_graft
 
+macro assert_fails(ex)
+    quote
+        if (try; $(esc(ex)); true; catch e; false; end)
+            error($("@assert_fails: $ex didn't fail!"))
+        end
+    end
+end
+
 macro graft(args...)
     error("Should never be invoked directly!")
 end
@@ -87,6 +95,16 @@ end
         s = 6
     end
     @assert s == 6
+end
+
+@assert_fails @test_graft let
+    @graft a = 3
+end
+@assert_fails @test_graft let
+    @graft local d1 = 3
+end
+@assert_fails @test_graft let
+    @graft local d2
 end
 
 end # module
