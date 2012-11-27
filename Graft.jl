@@ -41,10 +41,10 @@ function get_entry(scope::LocalScope, sym::Symbol)
     has(scope.syms, sym) ? scope.syms[sym] : get_entry(scope.parent, sym)
 end
 
-get_getter(scope::LocalScope, sym::Symbol) = get_entry( scope, sym)[1]
-get_setter(scope::LocalScope, sym::Symbol) = get_entry( scope, sym)[2]
-ref(   scope::LocalScope,     sym::Symbol) = get_getter(scope, sym)()
-assign(scope::LocalScope, x,  sym::Symbol) = get_setter(scope, sym)(x)
+getter(scope::LocalScope, sym::Symbol) = get_entry( scope, sym)[1]
+setter(scope::LocalScope, sym::Symbol) = get_entry( scope, sym)[2]
+ref(   scope::LocalScope,     sym::Symbol) = getter(scope, sym)()
+assign(scope::LocalScope, x,  sym::Symbol) = setter(scope, sym)(x)
 
 function code_getset(sym::Symbol)
     val = gensym(string(sym))
@@ -113,7 +113,7 @@ graft(s::LocalScope, ex)                     = ex
 graft(s::LocalScope, node::Union(Leaf,Line)) = node.ex
 function graft(s::LocalScope, ex::Sym)
     sym = ex.ex
-    (has(s, sym) && !has(ex.env, sym)) ? expr(:call, get_getter(s, sym)) : sym
+    (has(s, sym) && !has(ex.env, sym)) ? expr(:call, quot(getter(s,sym))) : sym
 end
 function graft(s::LocalScope, ex::Union(Expr, Block))
     head, args = get_head(ex), ex.args
@@ -123,7 +123,7 @@ function graft(s::LocalScope, ex::Union(Expr, Block))
             rhs = graft(s, rhs)
             sym = lhs.ex
             if has(lhs.env, sym); return :($sym = $rhs)
-            elseif has(s, sym);   return expr(:call, get_setter(s, sym), rhs)
+            elseif has(s, sym);   return expr(:call, quot(setter(s,sym)), rhs)
             else; error("No setter in scope found for $(sym)!")
             end
         elseif is_expr(lhs, :tuple)
