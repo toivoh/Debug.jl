@@ -16,8 +16,14 @@ instrument(trap_ex, ex) = Graft.instrument(trap_ex,    analyze(     ex, true))
 graft(env::Env, scope::Scope, ex) = Graft.graft(scope, analyze(env, ex, false))
 graft(scope::Scope, ex) = graft(child(NoEnv()), scope, ex)
 
-macro debug(ex)
+macro debug(args...)
+    code_debug(args...)
+end
+
+code_debug(ex) = code_debug(quot(trap), ex)
+function code_debug(trap_ex, ex)
     globalvar = esc(gensym("globalvar"))
+    @gensym trap
     quote
         $globalvar = false
         try
@@ -27,7 +33,8 @@ macro debug(ex)
         if !$globalvar
             error("@debug: must be applied in global scope!")
         end
-        $(esc(instrument(quot(trap), ex)))
+        const $(esc(trap)) = $(esc(trap_ex))
+        $(esc(instrument(trap, ex)))
     end
 end
 
