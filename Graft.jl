@@ -72,21 +72,13 @@ instrument(env, node::Union(Leaf,Sym,Line)) = node.ex
 function instrument(env, ex::Expr)
     expr(ex.head, {instrument(env, arg) for arg in ex.args})
 end
-collect_syms!(syms::Set{Symbol}, ::NoEnv, outer::Env) = nothing
-function collect_syms!(syms::Set{Symbol}, s::LocalEnv, outer::Env)
-    if is(s, outer); return; end
-    collect_syms!(syms, s.parent, outer)
-    add_each(syms, s.defined)
-end
 function instrument(env, ex::Block)
-    syms = Set{Symbol}()
-    collect_syms!(syms, ex.env, env[1])
-    
     code = {}
-    if is(ex.env, env[1])
-        env = (ex.env, env[2])
-    else
-        name = gensym("env")
+    if !is(ex.env, env[1])
+        syms, e = Set{Symbol}(), ex.env
+        while !is(e, env[1]);  add_each(syms, e.defined); e = e.parent;  end
+
+        name = gensym("scope")
         push(code, code_scope(name, env[2], syms))
         env = (ex.env, name)
     end
