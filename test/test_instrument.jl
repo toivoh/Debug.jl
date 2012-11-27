@@ -2,7 +2,6 @@ include("debug.jl")
 
 module TestInstrument
 using Base, Debug, Debug.Analysis
-import Debug.trap
 
 trap(line, file, scope) = println("trap: line = $line, file = $(repr(file))")
 
