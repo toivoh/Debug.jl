@@ -31,12 +31,12 @@ macro debug(ex)
     end
 end
 
-#debug_eval(scope::Scope, ex) = eval(graft(scope, ex))
+#debug_eval(scope::Scope, ex) = eval(expr(:let, graft(scope, ex)))
 debug_eval(scope::NoScope, ex) = eval(ex)
 function debug_eval(scope::LocalScope, ex)
-    ex2 = graft(scope, ex)
+    ex2 = expr(:let, graft(scope, ex))
     eval(ex2)
-#     eval(graft(scope, ex)) # doesn't work?
+#     eval(expr(:let, graft(scope, ex))) # doesn't work?
 end
 
 end # module
