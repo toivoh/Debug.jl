@@ -1,5 +1,7 @@
 include("debug.jl")
 
+module TestInteractive
+using Base
 import Debug.@debug
 
 @debug let
@@ -10,3 +12,5 @@ import Debug.@debug
         x, y = y, x+y
     end
 end
+
+end # module
