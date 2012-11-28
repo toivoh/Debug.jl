@@ -149,7 +149,6 @@ Known Issues
 ------------
 I have tried to encode the scoping rules of julia as accurately as possible,
 but I'm bound to have missed something. Also,
-* `type` blocks have not been correctly implemented.
 * The scoping rules for `for` blocks etc. in global scope
   are not quite accurate.
 * Code within macro expansions may become tagged with the wrong source file.
