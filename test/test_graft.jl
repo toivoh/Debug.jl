@@ -2,7 +2,8 @@ include(find_in_path("Debug.jl"))
 
 module TestGraft
 export @syms
-using Base, Debug, Debug.Meta, Debug.Analysis
+using Base, Debug.Meta, Debug.Eval
+import Debug, Debug.instrument
 export cut_grafts, @test_graft
 
 macro assert_fails(ex)
@@ -21,7 +22,7 @@ macro test_graft(ex)
     stem, grafts = cut_grafts(ex)
     grafts = tuple(grafts...)  # make grafts work as just a value
     trap = (loc, scope)->debug_eval(scope, grafts[loc.line])
-    Debug.instrument(quot(trap), stem)
+    instrument(quot(trap), stem)
 end
 
 cut_grafts(ex) = (grafts = {}; (cut_grafts!(grafts, ex), grafts))

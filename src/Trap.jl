@@ -4,7 +4,7 @@
 # Interactive debug trap
 
 module Trap
-using Base, Eval
+using Base, AST, Eval
 export enter_debug, trap
 
 enter_debug() = (global dostep = true)

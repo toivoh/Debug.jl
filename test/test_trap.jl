@@ -18,7 +18,7 @@ end
 function trap(loc::Loc, scope::Scope) 
     line = loc.line
     print(line, ":")
-    if (line > 10) print("\tx = ", scope[:x]) end
+    if (line >  10) print("\tx = ", scope[:x]) end
     if (line == 12) print("\tk = ", scope[:k]) end
     println()
 end
