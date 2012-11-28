@@ -5,7 +5,7 @@
 
 module Eval
 using Base, AST, Analysis, Graft
-export instrument, debug_eval, Scope
+export instrument, debug_eval, Loc, Scope
 
 # tie together Analysis and Graft
 instrument(trap_ex, ex) = Graft.instrument(trap_ex,    analyze(     ex, true))

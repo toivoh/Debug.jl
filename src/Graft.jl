@@ -50,7 +50,7 @@ assign(scope::LocalScope, x,  sym::Symbol) = setter(scope, sym)(x)
 
 # ---- instrument -------------------------------------------------------------
 # Add Scope creation and debug traps to (analyzed) code
-# A call to trap() is added after every AST.Line (expr(:line) / LineNumberNode)
+# A call to trap() is added after every AST.Loc (expr(:line) / LineNumberNode)
 
 type Context
     trap_ex
@@ -76,7 +76,7 @@ function instrument(trap_ex, ex)
     instrument(Context(trap_ex, NoEnv(), quot(NoScope())), ex)
 end
 
-instrument(c::Context, node::Union(Leaf,Sym,Line)) = node.ex
+instrument(c::Context, node::Union(Leaf,Sym,Loc)) = node.ex
 function instrument(c::Context, ex::Expr)
     expr(ex.head, {instrument(c, arg) for arg in ex.args})
 end
@@ -93,9 +93,8 @@ function instrument(c::Context, ex::Block)
     
     for arg in ex.args
         push(code, instrument(c, arg))
-        if isa(arg, Line)
-            push(code, :($(c.trap_ex)($(arg.line), $(quot(arg.file)),
-                                      $(c.scope_ex))) )
+        if isa(arg, Loc)
+            push(code, :($(c.trap_ex)($(quot(arg)), $(c.scope_ex))) )
         end
     end
     expr(:block, code)
@@ -115,7 +114,7 @@ const updating_ops = {
  :>>>= => :>>>}
 
 graft(s::LocalScope, ex)                     = ex
-graft(s::LocalScope, node::Union(Leaf,Line)) = node.ex
+graft(s::LocalScope, node::Union(Leaf,Loc)) = node.ex
 function graft(s::LocalScope, ex::Sym)
     sym = ex.ex
     (has(s, sym) && !has(ex.env, sym)) ? expr(:call, quot(getter(s,sym))) : sym

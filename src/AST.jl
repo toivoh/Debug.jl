@@ -8,7 +8,7 @@ using Base
 import Base.has
 
 export Env, LocalEnv, NoEnv, child, add_assigned, add_defined
-export Leaf, Line, Sym, Block
+export Leaf, Loc, Sym, Block
 export get_head
 
 
@@ -36,9 +36,9 @@ add_assigned(env::LocalEnv, sym::Symbol) = add(env.assigned, sym)
 type Block;    args::Vector; env::Env;          end # :block with Env
 type Sym;      ex::Symbol;   env::Env;          end # Symbol with Env
 type Leaf{T};  ex::T;                           end # Unexpanded node
-type Line{T};  ex::T; line::Int; file::String;  end
-Line{T}(ex::T, line, file) = Line{T}(ex, line, string(file))
-Line{T}(ex::T, line)       = Line{T}(ex, line, "")
+type Loc{T};   ex::T; line::Int; file::String;  end
+Loc{T}(ex::T, line, file) = Loc{T}(ex, line, string(file))
+Loc{T}(ex::T, line)       = Loc{T}(ex, line, "")
 get_head(ex::Block) = :block
 get_head(ex::Expr)  = ex.head
 

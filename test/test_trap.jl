@@ -15,7 +15,8 @@ trap(args...) = nothing
     x
 end
 
-function trap(line::Int, file, scope::Scope) 
+function trap(loc::Loc, scope::Scope) 
+    line = loc.line
     print(line, ":")
     if (line > 10) print("\tx = ", scope[:x]) end
     if (line == 12) print("\tk = ", scope[:k]) end

@@ -21,7 +21,7 @@ end
 macro test_graft(ex)
     stem, grafts = cut_grafts(ex)
     grafts = tuple(grafts...)  # make grafts work as just a value
-    trap = (line, file, scope)->debug_eval(scope, grafts[line])    
+    trap = (loc, scope)->debug_eval(scope, grafts[loc.line])
     Debug.instrument(quot(trap), stem)
 end
 

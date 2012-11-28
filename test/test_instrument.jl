@@ -3,7 +3,7 @@ include(find_in_path("Debug.jl"))
 module TestInstrument
 using Base, Debug, Debug.Analysis
 
-trap(line, file, scope) = println("trap: line = $line, file = $(repr(file))")
+trap(loc, scope) = println("trap: line = $(loc.line), file = $(loc.file)")
 
 code = quote
     function()

@@ -37,7 +37,7 @@ const typed_comprehensions =   [typed_comprehension, typed_dict_comprehension]
 
 
 # ---- decorate(): add scoping info to AST ------------------------------------
-# Rewrites AST, exchanging some Expr:s etc for Block/Sym/Leaf/Line
+# Rewrites AST, exchanging some Expr:s etc for Block/Sym/Leaf/Loc
 # to include scope/other relevant info and to classify nodes.
 
 abstract State
@@ -54,7 +54,7 @@ end
 decorate(states::Vector, ex::Expr) = expr(ex.head, decorate(states, ex.args))
 
 decorate(s::State,       ex)                 = Leaf(ex)
-decorate(s::SimpleState, ex::LineNumberNode) = Line(ex, ex.line)
+decorate(s::SimpleState, ex::LineNumberNode) = Loc(ex, ex.line)
 decorate(s::SimpleState, ex::SymbolNode)     = decorate(s, ex.name)
 decorate(s::Def, ex::Symbol) = (add_defined( s.env, ex); Sym(ex,s.env))
 decorate(s::Lhs, ex::Symbol) = (add_assigned(s.env, ex); Sym(ex,s.env))
@@ -145,7 +145,7 @@ end
 
 function decorate(state::SimpleState, ex::Expr)
     head, args  = ex.head, ex.args
-    if head === :line;                     return Line(ex, args...)
+    if head === :line;                     return Loc(ex, args...)
     elseif contains([:quote, :top], head); return Leaf(ex)
     elseif head === :macrocall; return decorate(state, macroexpand(ex))
     end
@@ -160,10 +160,10 @@ end
 
 ## set_source!(): propagate source file info ##
 set_source!(ex,       file::String) = nothing
-set_source!(ex::Line, file::String) = (ex.file = file)
+set_source!(ex::Loc, file::String) = (ex.file = file)
 function set_source!(ex::Union(Expr,Block), file::String)
     for arg in ex.args
-        if isa(arg, Line) && arg.file != ""; file = arg.file; end
+        if isa(arg, Loc) && arg.file != ""; file = arg.file; end
         set_source!(arg, file)
     end
 end
@@ -186,7 +186,7 @@ function postprocess_env!(envs::Set{LocalEnv}, env::LocalEnv)
     env.assigned = env.defined | p_assigned
 end
 
-# ---- analyze(): decorate and then propagate source file info among Line's ---
+# ---- analyze(): decorate and then propagate source file info among Loc's ---
 
 analyze(ex, process_envs::Bool) = analyze(Rhs(NoEnv()), ex, process_envs)
 analyze(env::Env, ex, process_envs::Bool) = analyze(Rhs(env), ex, process_envs)

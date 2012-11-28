@@ -30,7 +30,7 @@ macro syms(args...)
     end
 end
 
-reconstruct(node::Union(Leaf,Sym,Line)) = node.ex
+reconstruct(node::Union(Leaf,Sym,Loc)) = node.ex
 reconstruct(ex::Expr) = expr(ex.head, {reconstruct(arg) for arg in ex.args})
 function reconstruct(block::Block)
     env = block.env

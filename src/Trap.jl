@@ -8,10 +8,10 @@ using Base, Eval
 export enter_debug, trap
 
 enter_debug() = (global dostep = true)
-function trap(line::Int, file, scope::Scope)
+function trap(loc::Loc, scope::Scope)
     global dostep
     if !dostep; return; end
-    print(file, "\n: ", line)
+    print(loc.file, "\n: ", loc.line)
     while true
         print("\ndebug> "); flush(OUTPUT_STREAM)
         cmd = readline(stdin_stream)[1:end-1]

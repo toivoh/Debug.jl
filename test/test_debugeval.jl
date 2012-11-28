@@ -3,7 +3,7 @@ include(find_in_path("Debug.jl"))
 module TestDebugEval
 using Base, Debug
 
-trap(args...) = nothing
+trap(args...) = error("dummy method")
 
 
 @debug trap function f(n)
@@ -16,7 +16,8 @@ trap(args...) = nothing
     x           # line 16
 end
 
-function trap(line::Int, file, scope::Scope) 
+function trap(loc::Loc, scope::Scope) 
+    line = loc.line
     print(line, ":")
 
     if (line == 11) debug_eval(scope, :(x += 1)) end
