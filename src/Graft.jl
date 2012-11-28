@@ -70,6 +70,14 @@ function instrument(c::Context, ex::Expr)
 end
 function instrument(c::Context, ex::Block)
     code = {}
+
+    if is_expr(ex.env.source, :type)
+        for arg in ex.args        
+            if !isa(arg, Loc);  push(code, instrument(c, arg));  end
+        end
+        return expr(:block, code)
+    end
+
     if !is(ex.env, c.env)
         syms, e = Set{Symbol}(), ex.env
         while !is(e, c.env);  add_each(syms, e.defined); e = e.parent;  end
