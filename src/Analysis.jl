@@ -4,19 +4,13 @@
 # Scoping analysis used to support instrument and graft
 
 module Analysis
-using Base, AST
+using Base, AST, Meta
 import Base.promote_rule
 
-export analyze, quot
+export analyze
 
 
 # ---- Helpers ----------------------------------------------------------------
-
-quot(ex) = expr(:quote, {ex})
-
-is_expr(ex,       head::Symbol)   = false
-is_expr(ex::Expr, head::Symbol)   = ex.head == head
-is_expr(ex, head::Symbol, n::Int) = is_expr(ex, head) && length(ex.args) == n
 
 is_linenumber(ex::LineNumberNode) = true
 is_linenumber(ex::Expr)           = is(ex.head, :line)

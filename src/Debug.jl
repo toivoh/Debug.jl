@@ -3,12 +3,13 @@ module Debug
 using Base
 export @debug, debug_eval, Loc, Scope
 
+include(find_in_path("Debug/src/Meta.jl"))
 include(find_in_path("Debug/src/AST.jl"))
 include(find_in_path("Debug/src/Analysis.jl"))
 include(find_in_path("Debug/src/Graft.jl"))
 include(find_in_path("Debug/src/Eval.jl"))
 include(find_in_path("Debug/src/Trap.jl"))
-using AST, Analysis, Graft, Eval, Trap
+using Meta, AST, Analysis, Graft, Eval, Trap
 
 macro debug(args...)
     code_debug(args...)

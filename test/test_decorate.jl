@@ -2,8 +2,7 @@ include(find_in_path("Debug.jl"))
 
 module TestDecorate
 export @syms
-using Base, Debug, Debug.AST, Debug.Analysis
-const is_expr = Debug.Analysis.is_expr
+using Base, Debug, Debug.AST, Debug.Meta, Debug.Analysis
 
 macro assert_fails(ex)
     quote

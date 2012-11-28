@@ -5,23 +5,10 @@
 # were evaluated inside such code (grafting)
 
 module Graft
-using Base, AST
+using Base, AST, Meta
 import Base.ref, Base.assign, Base.has
 
 export Scope, NoScope, LocalScope
-
-
-# ---- Helpers ----------------------------------------------------------------
-
-quot(ex) = expr(:quote, {ex})
-
-is_expr(ex,       head)           = false
-is_expr(ex::Expr, head::Symbol)   = ex.head == head
-is_expr(ex::Expr, heads::Set)     = has(heads, ex.head)
-is_expr(ex::Expr, heads::Vector)  = contains(heads, ex.head)
-is_expr(ex, head::Symbol, n::Int) = is_expr(ex, head) && length(ex.args) == n
-
-const typed_dict                = symbol("typed-dict")
 
 
 # ---- Scope: runtime symbol table with getters and setters -------------------
@@ -62,6 +49,7 @@ function code_getset(sym::Symbol)
     val = gensym(string(sym))
     :( ()->$sym, $val->($sym=$val) )
 end
+const typed_dict = symbol("typed-dict")
 function code_scope(scopesym::Symbol, parent, env::Env, syms)
     pairs = {expr(:(=>), quot(sym), code_getset(sym)) for sym in syms}
     :(local $scopesym = $(quot(LocalScope))(

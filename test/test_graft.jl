@@ -2,8 +2,7 @@ include(find_in_path("Debug.jl"))
 
 module TestGraft
 export @syms
-using Base, Debug, Debug.Analysis
-const is_expr = Debug.Analysis.is_expr
+using Base, Debug, Debug.Meta, Debug.Analysis
 export cut_grafts, @test_graft
 
 macro assert_fails(ex)
