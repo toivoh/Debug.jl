@@ -1,8 +1,8 @@
 Debug.jl v0
 ===========
 Prototype interactive debugger for [julia](julialang.org).
-Bug reports, and feature suggestions are welcome at
-[https://github.com/toivoh/Debug.jl/issues].
+Bug reports and feature suggestions are welcome at
+https://github.com/toivoh/Debug.jl/issues.
 
 Installation
 ------------
@@ -153,10 +153,11 @@ but I'm bound to have missed something. Also,
 * The scoping rules for `for` blocks etc. in global scope
   are not quite accurate.
 * Code within macro expansions may become tagged with the wrong source file.
+
 Known issues can also be found at the
 [issues page](https://github.com/toivoh/Debug.jl/issues).
-Bug reports and feature requests are also welcomed there.
+Bug reports and feature requests are welcome.
 
 The interactive debugger is very crude so far.
-Once the scoping analysis is reasonably accurate, that should be the next
-target for improvement.
+It should be the next target for improvement 
+once the scoping analysis is reasonably accurate.
