@@ -5,7 +5,7 @@
 
 module AST
 using Base
-import Base.has
+import Base.has, Base.show
 
 export Env, LocalEnv, NoEnv, child, add_assigned, add_defined
 export Leaf, Loc, Sym, Block
@@ -23,6 +23,10 @@ type LocalEnv <: Env
     assigned::Set{Symbol}
 end
 child(source, env::Env) = LocalEnv(source, env, Set{Symbol}(), Set{Symbol}())
+
+function show(io::IO, env::LocalEnv) 
+    print(io, "LocalEnv(,$(env.parent),$(env.defined),$(env.assigned))")
+end
 
 has(env::NoEnv,    sym::Symbol) = false
 has(env::LocalEnv, sym::Symbol) = has(env.defined,sym) || has(env.parent,sym)
