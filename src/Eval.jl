@@ -14,7 +14,7 @@ graft(scope::Scope, ex) = graft(child(NoEnv()), scope, ex)
 
 debug_eval(scope::NoScope, ex) = eval(ex)
 function debug_eval(scope::LocalScope, ex)
-    e = child(NoEnv())
+    e = child(expr(:let, ex), NoEnv()) # todo: actually wrap ex in a let?
     grafted = graft(e, scope, ex)
 
     assigned = e.assigned - scope.env.assigned

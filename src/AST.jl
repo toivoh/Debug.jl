@@ -17,11 +17,12 @@ export get_head
 abstract Env
 type NoEnv    <: Env; end
 type LocalEnv <: Env
+    source
     parent::Env
     defined::Set{Symbol}
     assigned::Set{Symbol}
 end
-child(env::Env) = LocalEnv(env, Set{Symbol}(), Set{Symbol}())
+child(source, env::Env) = LocalEnv(source, env, Set{Symbol}(), Set{Symbol}())
 
 has(env::NoEnv,    sym::Symbol) = false
 has(env::LocalEnv, sym::Symbol) = has(env.defined,sym) || has(env.parent,sym)

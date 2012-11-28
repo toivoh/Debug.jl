@@ -94,22 +94,23 @@ function decorate(s::Sig, ex::Expr)
 end
 
 # return a Vector of visit states for each arg of an expr(head, args)
-function argstates(state::SimpleState, head, args)
+function argstates(state::SimpleState, ex)
+    head, args = ex.head, ex.args
     e, nargs = state.env, length(args)
 
     if contains([:function, :(=)], head) && is_expr(args[1], :call)
-        if isa(e, TypeEnv); return argstates(Def(raw(e)), head, args); end
-        c = child(e); [Sig(state, c), Rhs(c)]
+        if isa(e, TypeEnv); return argstates(Def(raw(e)), ex); end
+        c = child(ex, e); [Sig(state, c), Rhs(c)]
     elseif contains([:function, :(->)], head)
-        c = child(e); [Def(c),        Rhs(c)]
+        c = child(ex, e); [Def(c),        Rhs(c)]
         
     elseif contains([:global, :local], head); fill(Def(e), nargs)
-    elseif head === :while;              [Rhs(e),        Rhs(child(e))]
-    elseif head === :try; cc = child(e); [Rhs(child(e)), Def(cc),Rhs(cc)]
-    elseif head === :for; c = child(e);  [SplitDef(c,e), Rhs(c)]
-    elseif contains([untyped_comprehensions, :let], head); c = child(e); 
+    elseif head === :while;              [Rhs(e),        Rhs(child(ex, e))]
+    elseif head === :try; cc = child(ex,e); [Rhs(child(ex,e)), Def(cc),Rhs(cc)]
+    elseif head === :for; c = child(ex, e);  [SplitDef(c,e), Rhs(c)]
+    elseif contains([untyped_comprehensions, :let], head); c = child(ex, e); 
         [Rhs(c), fill(SplitDef(c,e), nargs-1)]
-    elseif contains(typed_comprehensions, head); c = child(e)
+    elseif contains(typed_comprehensions, head); c = child(ex, e)
         [Rhs(e), Rhs(c), fill(SplitDef(c,e), nargs-2)]
         
     elseif head === :(=);   [(isa(state,Def) ? state : Lhs(e)), Rhs(e)]
@@ -122,9 +123,9 @@ function argstates(state::SimpleState, head, args)
 
     # I'm guessing abstract and typealias wrap their args in one scope,
     # except the actual name to be defined
-    elseif head === :abstract;  c=child(e); [SplitDef(e,c)]
-    elseif head === :type;      c=child(e); [SplitDef(e,c), Rhs(TypeEnv(c))]
-    elseif head === :typealias; c=child(e); [SplitDef(e,c), Rhs(c)]
+    elseif head === :abstract; c=child(ex, e); [SplitDef(e,c)]
+    elseif head === :type;     c=child(ex, e); [SplitDef(e,c), Rhs(TypeEnv(c))]
+    elseif head === :typealias;c=child(ex, e); [SplitDef(e,c), Rhs(c)]
 
     else fill(Rhs(e), nargs)
     end
@@ -137,7 +138,7 @@ function decorate(state::SimpleState, ex::Expr)
     elseif head === :macrocall; return decorate(state, macroexpand(ex))
     end
 
-    states = argstates(state, head, args)
+    states = argstates(state, ex)
     if head === :block; Block(decorate(states, args), raw(state.env))
     else                decorate(states, ex)
     end
