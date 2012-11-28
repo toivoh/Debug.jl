@@ -3,25 +3,26 @@ include(find_in_path("Debug.jl"))
 module TestTrap
 using Base, Debug
 
-trap(args...) = nothing
+firstline = -1
+function trap(loc::Loc, scope::Scope)
+    global firstline = (firstline == -1) ? loc.line : firstline
+    line = loc.line - firstline + 1
 
-
-@debug trap function f(n)
-    x = 0  # this must be line #10
-    for k=1:n
-        x += k
-    end
-    x = x*x
-    x
-end
-
-function trap(loc::Loc, scope::Scope) 
-    line = loc.line
     print(line, ":")
-    if (line >  10) print("\tx = ", scope[:x]) end
-    if (line == 12) print("\tk = ", scope[:k]) end
+    if (line >  1); print("\tx = ", scope[:x]) end
+    if (line == 3); print("\tk = ", scope[:k]) end
     println()
 end
+
+@debug trap function f(n)
+    x = 0       # line 1
+    for k=1:n   # line 2
+        x += k  # line 3
+    end         # line 4
+    x = x*x     # line 5
+    x           # line 6
+end
+
 
 f(3)
 
