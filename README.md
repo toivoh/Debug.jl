@@ -121,3 +121,25 @@ produces the output
 The `scope` argument passed to the `trap` function can be used with
 `debug_eval(scope, ex)` to evaluate an expression `ex` as if it were in 
 that scope.
+
+How it Works
+------------
+The main effort so far has gone into analyzing the scoping of symbols in a 
+piece of code, and to modify code to allow one piece of code to be evaluated as
+if it were at some particular point in another piece of code.
+The interactive debug facility is built on top of this toolbox.
+
+* The code passed to `@debug` is _analyzed_ to mark each block and symbol with
+  an environment (static scope).
+  Each environment has a parent and a set of symbols that are introduced in it,
+  including reintroduced symbols that shadow definitions in an outer scope.
+* The code is then _instrumented_ to insert a trap call after each line number
+  in a block. A `Scope` (runtime scope) object that contains getter and setter
+  functions for each visible local symbol is also created upon entry to
+  each block that lies within a new environment.
+* The code passed to `debug_eval` is analyzed in the same way as to `@debug`.
+  The code is then _grafted_ into the supplied scope by
+  replacing each reads/write to a variable
+  with a call to the corresponding getter/setter function,
+  if it is visible at that point in the grafted code.
+
