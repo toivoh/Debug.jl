@@ -11,9 +11,9 @@ enter_debug() = (global dostep = true)
 function trap(loc::Loc, scope::Scope)
     global dostep
     if !dostep; return; end
-    print(loc.file, "\n: ", loc.line)
+    print("\nat ", loc.file, ":", loc.line)
     while true
-        print("\ndebug> "); flush(OUTPUT_STREAM)
+        print("\ndebug:$(loc.line)> "); flush(OUTPUT_STREAM)
         cmd = readline(stdin_stream)[1:end-1]
         if cmd == "n";     break
         elseif cmd == "r"; dostep = false; break
