@@ -22,7 +22,7 @@ macro test_graft(ex)
     stem, grafts = cut_grafts(ex)
     grafts = tuple(grafts...)  # make grafts work as just a value
     trap = (loc, scope)->debug_eval(scope, grafts[loc.line])
-    instrument(quot(trap), stem)
+    esc(instrument(quot(trap), stem))
 end
 
 cut_grafts(ex) = (grafts = {}; (cut_grafts!(grafts, ex), grafts))
@@ -95,6 +95,20 @@ end
         s = 6
     end
     @assert s == 6
+end
+
+@test_graft begin
+    type TT
+        x::Int
+        function TT(x)
+            local z
+            @graft z=2x
+            new(z)
+        end
+    end
+
+    t = TT(42)
+    @assert t.x == 84
 end
 
 @assert_fails @test_graft let

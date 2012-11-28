@@ -71,7 +71,7 @@ end
 function instrument(c::Context, ex::Block)
     code = {}
 
-    if is_expr(ex.env.source, :type)
+    if isa(ex.env, LocalEnv) && is_expr(ex.env.source, :type)
         for arg in ex.args        
             if !isa(arg, Loc);  push(code, instrument(c, arg));  end
         end
