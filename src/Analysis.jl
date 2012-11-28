@@ -42,6 +42,14 @@ type Def <: SimpleState;  env::Env;  end  # definition, e.g. inside local
 type Lhs <: SimpleState;  env::Env;  end  # e.g. to the left of =
 type Rhs <: SimpleState;  env::Env;  end  # plain evaluation
 
+# TypeEnv: Env used in a type block to throw away non-method definitions 
+type TypeEnv <: Env
+    env::LocalEnv
+end
+raw(env::TypeEnv) = env.env
+raw(env::Env)     = env
+
+
 function decorate(states::Vector, args::Vector) 
     {decorate(s, arg) for (s, arg) in zip(states, args)}
 end
@@ -50,26 +58,9 @@ decorate(states::Vector, ex::Expr) = expr(ex.head, decorate(states, ex.args))
 decorate(s::State,       ex)                 = Leaf(ex)
 decorate(s::SimpleState, ex::LineNumberNode) = Loc(ex, ex.line)
 decorate(s::SimpleState, ex::SymbolNode)     = decorate(s, ex.name)
-decorate(s::Def, ex::Symbol) = (add_defined( s.env, ex); Sym(ex,s.env))
-decorate(s::Lhs, ex::Symbol) = (add_assigned(s.env, ex); Sym(ex,s.env))
-decorate(s::SimpleState, ex::Symbol) = Sym(ex,s.env)
-
-# Typ: inside type. todo: better way?
-type Typ <: SimpleState;  env::Env;  end
-function decorate(s::Typ, ex::Expr)
-    head, args = ex.head, ex.args
-    if contains([:function, :(=)], head) && is_expr(args[1], :call)
-        decorate(Def(s.env), ex)
-    else
-        # This will disable all scoping, defining and assigning
-        # in the body of the type not caused by method definitions.
-        # Todo: How should e.g. a while loop in a type body be treated?
-        states = fill(s, length(args))
-        if head === :block; Block(decorate(states, args), s.env)
-        else                decorate(states, ex)
-        end
-    end
-end
+decorate(s::Def, ex::Symbol) = (add_defined( s.env, ex); Sym(ex,raw(s.env)))
+decorate(s::Lhs, ex::Symbol) = (add_assigned(s.env, ex); Sym(ex,raw(s.env)))
+decorate(s::SimpleState, ex::Symbol) = Sym(ex,raw(s.env))
 
 # SplitDef: Def with different scopes for left and right side, e.g.
 # let x_inner = y_outer
@@ -105,19 +96,21 @@ end
 # return a Vector of visit states for each arg of an expr(head, args)
 function argstates(state::SimpleState, head, args)
     e, nargs = state.env, length(args)
+
     if contains([:function, :(=)], head) && is_expr(args[1], :call)
-        inner = child(e); [Sig(state, inner), Rhs(inner)]
+        if isa(e, TypeEnv); return argstates(Def(raw(e)), head, args); end
+        c = child(e); [Sig(state, c), Rhs(c)]
     elseif contains([:function, :(->)], head)
-        inner = child(e); [Def(inner),        Rhs(inner)]
+        c = child(e); [Def(c),        Rhs(c)]
         
     elseif contains([:global, :local], head); fill(Def(e), nargs)
-    elseif head === :while;                [Rhs(e), Rhs(child(e))]
-    elseif head === :try; ec = child(e);   [Rhs(child(e)), Def(ec),Rhs(ec)]
-    elseif head === :for; inner = child(e);[SplitDef(inner,e), Rhs(inner)]
-    elseif contains([untyped_comprehensions, :let], head); inner = child(e); 
-        [Rhs(inner), fill(SplitDef(inner,e), nargs-1)]
-    elseif contains(typed_comprehensions, head); inner = child(e)
-        [Rhs(e), Rhs(inner), fill(SplitDef(inner,e), nargs-2)]
+    elseif head === :while;              [Rhs(e),        Rhs(child(e))]
+    elseif head === :try; cc = child(e); [Rhs(child(e)), Def(cc),Rhs(cc)]
+    elseif head === :for; c = child(e);  [SplitDef(c,e), Rhs(c)]
+    elseif contains([untyped_comprehensions, :let], head); c = child(e); 
+        [Rhs(c), fill(SplitDef(c,e), nargs-1)]
+    elseif contains(typed_comprehensions, head); c = child(e)
+        [Rhs(e), Rhs(c), fill(SplitDef(c,e), nargs-2)]
         
     elseif head === :(=);   [(isa(state,Def) ? state : Lhs(e)), Rhs(e)]
     elseif head === :(<:);  [(isa(state,Def) ? state : Rhs(e)), Rhs(e)]
@@ -129,9 +122,9 @@ function argstates(state::SimpleState, head, args)
 
     # I'm guessing abstract and typealias wrap their args in one scope,
     # except the actual name to be defined
-    elseif head === :abstract;  inner=child(e); [SplitDef(e,inner)]
-    elseif head === :type;      inner=child(e); [SplitDef(e,inner), Typ(inner)]
-    elseif head === :typealias; inner=child(e); [SplitDef(e,inner), Rhs(inner)]
+    elseif head === :abstract;  c=child(e); [SplitDef(e,c)]
+    elseif head === :type;      c=child(e); [SplitDef(e,c), Rhs(TypeEnv(c))]
+    elseif head === :typealias; c=child(e); [SplitDef(e,c), Rhs(c)]
 
     else fill(Rhs(e), nargs)
     end
@@ -145,7 +138,7 @@ function decorate(state::SimpleState, ex::Expr)
     end
 
     states = argstates(state, head, args)
-    if head === :block; Block(decorate(states, args), state.env)
+    if head === :block; Block(decorate(states, args), raw(state.env))
     else                decorate(states, ex)
     end
 end

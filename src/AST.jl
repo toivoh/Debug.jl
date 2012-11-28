@@ -26,8 +26,8 @@ child(env::Env) = LocalEnv(env, Set{Symbol}(), Set{Symbol}())
 has(env::NoEnv,    sym::Symbol) = false
 has(env::LocalEnv, sym::Symbol) = has(env.defined,sym) || has(env.parent,sym)
 
-add_defined( ::NoEnv, ::Symbol) = nothing
-add_assigned(::NoEnv, ::Symbol) = nothing
+add_defined( ::Env, ::Symbol) = nothing
+add_assigned(::Env, ::Symbol) = nothing
 add_defined( env::LocalEnv, sym::Symbol) = add(env.defined,  sym)
 add_assigned(env::LocalEnv, sym::Symbol) = add(env.assigned, sym)
 
