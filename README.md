@@ -1,65 +1,74 @@
 Debug.jl v0
 ===========
-Simple usage example:
+Prototype interactive debugger for [julia](julialang.org).
+
+Installation
+------------
+Install the `Debug` julia package:
+
+    load("pkg.jl")
+    Pkg.init()  # If you haven't done it before
+    Pkg.add("Debug")
+
+Usage
+-----
+Use the `@debug` macro to mark code that you want to step through.
+`@debug` must be used in global scope.
+
+Simple example:
 
     julia> load("Debug.jl")
 
     julia> using Debug
 
-    julia> @debug begin    # line 1
-               x = 0       # line 2
-               for k=1:3   # line 3
-                   x += k  # line 4
-               end         # line 5
-               x           # line 6
+    julia> @debug begin
+               x = 0
+               for k=1:2
+                   x += k
+               end
+               x
            end
 
-    : 2
-    debug> x
+    at :2
+    debug:2> x
     x not defined
 
-    debug> n
+    debug:2> s
 
-    : 3
-    debug> x
+    at :3
+    debug:3> x
     0
 
-    debug> x=10
+    debug:3> x = 10
     10
 
-    debug> n
+    debug:3> s
 
-    : 4
-    debug> x
+    at :4
+    debug:4> x
     10
 
-    debug> n
+    debug:4> s
 
-    : 4
-    debug> x
+    at :4
+    debug:4> x
     11
 
-    debug> n
+    debug:4> s
 
-    : 4
-    debug> x
+    at :6
+    debug:6> x
     13
 
-    debug> n
-
-    : 6
-    debug> x
+    debug:6> x += 3
     16
 
-    debug> x += 4
-    20
+    debug:6> s
+    16
 
-    debug> n
-    20
-
-    julia> 
+    julia>
 
 The following single-character commands have special meaing:   
-`n`: next / step into    
-`r`: run   
+`s`: step into    
+`c`: continue running
 `q`: interrupt debug session (calls `error("interrupted")`)

@@ -15,8 +15,8 @@ function trap(loc::Loc, scope::Scope)
     while true
         print("\ndebug:$(loc.line)> "); flush(OUTPUT_STREAM)
         cmd = readline(stdin_stream)[1:end-1]
-        if cmd == "n";     break
-        elseif cmd == "r"; dostep = false; break
+        if cmd == "s";     break
+        elseif cmd == "c"; dostep = false; break
         elseif cmd == "q"; error("interrupted")
         end
 
