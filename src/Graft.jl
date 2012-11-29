@@ -64,7 +64,7 @@ function instrument(trap_ex, ex)
     instrument(Context(trap_ex, NoEnv(), quot(NoScope())), ex)
 end
 
-instrument(c::Context, node::Union(Leaf,Sym,Loc)) = node.ex
+instrument(c::Context, node::Union(Leaf,Sym)) = node.ex
 function instrument(c::Context, ex::Expr)
     expr(ex.head, {instrument(c, arg) for arg in ex.args})
 end
@@ -73,7 +73,7 @@ function instrument(c::Context, ex::Block)
 
     if isa(ex.env, LocalEnv) && is_expr(ex.env.source, :type)
         for arg in ex.args        
-            if !isa(arg, Loc);  push(code, instrument(c, arg));  end
+            if !isa(arg, Trap);  push(code, instrument(c, arg));  end
         end
         return expr(:block, code)
     end
@@ -88,9 +88,11 @@ function instrument(c::Context, ex::Block)
     end
     
     for arg in ex.args
-        push(code, instrument(c, arg))
-        if isa(arg, Loc)
+        if isa(arg, Trap)
+            if isa(arg, Loc);  push(code, arg.ex)  end
             push(code, :($(c.trap_ex)($(quot(arg)), $(c.scope_ex))) )
+        else
+            push(code, instrument(c, arg))
         end
     end
     expr(:block, code)
