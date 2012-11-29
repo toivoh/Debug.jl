@@ -1,13 +1,20 @@
 
-#   Debug.Trap:
-# ===============
+#   Debug.UI:
+# =============
 # Interactive debug trap
 
-module Trap
-using Base, AST, Eval
-export enter_debug, trap
+module UI
+using Base, Meta, AST, Eval
+export trap, @bp
 
-enter_debug() = (global dostep = true)
+type BreakPoint <: Trap; end
+
+macro bp()
+    BreakPoint()
+end
+
+dostep = false
+trap(::BreakPoint, scope::Scope) = (global dostep = true)
 function trap(loc::Loc, scope::Scope)
     global dostep
     if !dostep; return; end
@@ -17,7 +24,7 @@ function trap(loc::Loc, scope::Scope)
         cmd = readline(stdin_stream)[1:end-1]
         if cmd == "s";     break
         elseif cmd == "c"; dostep = false; break
-        elseif cmd == "q"; error("interrupted")
+        elseif cmd == "q"; dostep = false; error("interrupted")
         end
 
         try

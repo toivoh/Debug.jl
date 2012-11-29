@@ -49,13 +49,15 @@ end
 raw(env::TypeEnv) = env.env
 raw(env::Env)     = env
 
+leaf(ex)       = Leaf(ex)
+leaf(ex::Trap) = ex
 
 function decorate(states::Vector, args::Vector) 
     {decorate(s, arg) for (s, arg) in zip(states, args)}
 end
 decorate(states::Vector, ex::Expr) = expr(ex.head, decorate(states, ex.args))
 
-decorate(s::State,       ex)                 = Leaf(ex)
+decorate(s::State,       ex)                 = leaf(ex)
 decorate(s::SimpleState, ex::LineNumberNode) = Loc(ex, ex.line)
 decorate(s::SimpleState, ex::SymbolNode)     = decorate(s, ex.name)
 decorate(s::Def, ex::Symbol) = (add_defined( s.env, ex); Sym(ex,raw(s.env)))
@@ -134,7 +136,7 @@ end
 function decorate(state::SimpleState, ex::Expr)
     head, args  = ex.head, ex.args
     if head === :line;                     return Loc(ex, args...)
-    elseif contains([:quote, :top], head); return Leaf(ex)
+    elseif contains([:quote, :top], head); return leaf(ex)
     elseif head === :macrocall; return decorate(state, macroexpand(ex))
     end
 
