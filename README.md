@@ -24,56 +24,56 @@ Simple example:
 
     julia> using Debug
 
-    julia> @debug begin
-               x = 0
-               for k=1:2
-                   x += k
-               end
-               x
+    julia> @debug let           # line 1
+               x = 0            # line 2
+               for k=1:3        # line 3
+                   @bp          # line 4
+                   x += k       # line 5
+               end              # line 6
+               print("x = $x")  # line 7
            end
 
-    at :2
-    debug:2> x
-    x not defined
+    at :5
+    debug:5> k,x
+    (1,0)
 
-    debug:2> s
-
-    at :3
-    debug:3> x
-    0
-
-    debug:3> x = 10
+    debug:5> x = 10
     10
 
-    debug:3> s
+    debug:5> k,x
+    (1,10)
 
-    at :4
-    debug:4> x
-    10
+    debug:5> c
 
-    debug:4> s
+    at :5
+    debug:5> k,x
+    (2,11)
 
-    at :4
-    debug:4> x
-    11
+    debug:5> c
 
-    debug:4> s
+    at :5
+    debug:5> k,x
+    (3,13)
 
-    at :6
-    debug:6> x
-    13
+    debug:5> s
 
-    debug:6> x += 3
+    at :7
+    debug:7> k,x
+    in anonymous: k not defined
+
+    debug:7> x
     16
 
-    debug:6> s
-    16
+    debug:7> x += 4
+    20
 
-    julia>
+    debug:7> s
+    x = 20
 
+When inside a `@debug` block, `@bp` breaks and enters the debugger.   
 The following single-character commands have special meaing:   
 `s`: step into    
-`c`: continue running    
+`c`: continue to next breakpoint   
 `q`: quit debug session (calls `error("interrupted")`)    
 Any command string that is not one of these single characters is parsed
 and evaluated in the current scope.
