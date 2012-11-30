@@ -29,12 +29,12 @@ macro syms(args...)
     end
 end
 
-reconstruct(node::Union(Leaf,Sym,Loc)) = node.ex
-reconstruct(ex::Expr) = expr(ex.head, {reconstruct(arg) for arg in ex.args})
-function reconstruct(block::Block)
-    env = block.env
-    for arg in block.args
-        if isa(arg, Leaf{BlockEnv})
+rebuild(node::Leaf)   = node.ex
+rebuild(node::ExNode) = toex(node.head, {rebuild(arg) for arg in node.args})
+function rebuild(node::ExNode{Block})
+    env = node.head.env
+    for arg in node.args
+        if isa(arg, PLeaf{BlockEnv})
             if !(env.defined == arg.ex.defined)
                 error("env.defined = $(env.defined) != $(arg.ex.defined)")
             end
@@ -42,16 +42,16 @@ function reconstruct(block::Block)
             if !(just_assigned == arg.ex.assigned)
                 error("just_assigned = $(just_assigned) != $(arg.ex.assigned)")
             end
-        elseif isa(arg, Leaf{NoEnv})
+        elseif isa(arg, PLeaf{NoEnv})
             @assert isa(env, NoEnv)
         end
     end
-    expr(:block, {reconstruct(arg) for arg in block.args})
+    toex(node.head, {rebuild(arg) for arg in node.args})
 end
 
 function test_decorate(code)
     dcode = analyze(NoEnv(), code, false)
-    rcode = reconstruct(dcode)
+    rcode = rebuild(dcode)
     @assert rcode == code
 end
 macro test_decorate(ex)
