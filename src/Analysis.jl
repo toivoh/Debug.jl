@@ -49,20 +49,18 @@ end
 raw(env::TypeEnv) = env.env
 raw(env::Env)     = env
 
-leaf(ex)       = Leaf(ex)
-leaf(ex::Trap) = ex
-
 function decorate(states::Vector, args::Vector) 
     {decorate(s, arg) for (s, arg) in zip(states, args)}
 end
-decorate(states::Vector, ex::Expr) = expr(ex.head, decorate(states, ex.args))
+decorate(states::Vector, head, args) = Node(head, decorate(states, args))
+#decorate(states::Vector, ex::Expr) = decorate(states, ex.head, ex.args)
 
-decorate(s::State,       ex)                 = leaf(ex)
-decorate(s::SimpleState, ex::LineNumberNode) = Loc(ex, ex.line)
+decorate(s::State,       ex)                 = Leaf(ex)
+decorate(s::SimpleState, ex::LineNumberNode) = Leaf(Loc(ex, ex.line))
 decorate(s::SimpleState, ex::SymbolNode)     = decorate(s, ex.name)
-decorate(s::Def, ex::Symbol) = (add_defined( s.env, ex); Sym(ex,raw(s.env)))
-decorate(s::Lhs, ex::Symbol) = (add_assigned(s.env, ex); Sym(ex,raw(s.env)))
-decorate(s::SimpleState, ex::Symbol) = Sym(ex,raw(s.env))
+decorate(s::Def,ex::Symbol)=(add_defined( s.env, ex); Leaf(Sym(ex,raw(s.env))))
+decorate(s::Lhs,ex::Symbol)=(add_assigned(s.env, ex); Leaf(Sym(ex,raw(s.env))))
+decorate(s::SimpleState, ex::Symbol) = Leaf(Sym(ex,raw(s.env)))
 
 # SplitDef: Def with different scopes for left and right side, e.g.
 # let x_inner = y_outer
@@ -135,35 +133,37 @@ end
 
 function decorate(state::SimpleState, ex::Expr)
     head, args  = ex.head, ex.args
-    if head === :line;                     return Loc(ex, args...)
-    elseif contains([:quote, :top], head); return leaf(ex)
+    if head === :line;                     return Leaf(Loc(ex, args...))
+    elseif contains([:quote, :top], head); return Leaf(ex)
     elseif head === :macrocall; return decorate(state, macroexpand(ex))
     end
 
-    states = argstates(state, ex)
-    if head === :block; Block(decorate(states, args), raw(state.env))
-    else                decorate(states, ex)
-    end
+    states = argstates(state, ex)    
+    decorate(states, (head === :block) ? Block(raw(state.env)) : head, ex.args)
 end
 
 # ---- post-decoration processing ---------------------------------------------
 
 ## set_source!(): propagate source file info ##
-set_source!(ex,       file::String) = nothing
-set_source!(ex::Loc, file::String) = (ex.file = file)
-function set_source!(ex::Union(Expr,Block), file::String)
-    for arg in ex.args
-        if isa(arg, Loc) && arg.file != ""; file = arg.file; end
+set_source!(node::Leaf,      file::String) = nothing
+set_source!(node::Leaf{Loc}, file::String) = (node.value.file = file)
+function set_source!(node::ExNode, file::String)
+    for arg in node.args
+        if isa(arg, Leaf{Loc}) && arg.value.file != ""
+            file = arg.value.file
+        end
         set_source!(arg, file)
     end
 end
 
 ## postprocess_env!: find defined symbols among assigned ##
-postprocess_env!(envs::Set{LocalEnv}, ex) = nothing
-postprocess_env!(envs::Set{LocalEnv}, ex::Sym) = postprocess_env!(envs, ex.env)
-function postprocess_env!(envs::Set{LocalEnv}, ex::Union(Expr,Block))
-    if isa(ex, Block);  postprocess_env!(envs, ex.env); end
-    for arg in ex.args; postprocess_env!(envs, arg);    end
+postprocess_env!(envs::Set{LocalEnv}, node::Leaf) = nothing
+function postprocess_env!(envs::Set{LocalEnv}, node::Leaf{Sym}) 
+    postprocess_env!(envs, node.value.env)
+end
+function postprocess_env!(envs::Set{LocalEnv}, node::ExNode)
+    if isa(node.head, Block);  postprocess_env!(envs, node.head.env); end
+    for arg in node.args; postprocess_env!(envs, arg); end
 end
 
 postprocess_env!(envs::Set{LocalEnv}, ::NoEnv) = nothing
