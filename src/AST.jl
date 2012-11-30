@@ -8,8 +8,8 @@ using Base
 import Base.has, Base.show
 
 export Env, LocalEnv, NoEnv, child, add_assigned, add_defined
-export Trap, Loc, Leaf, Sym, Block
-export get_head
+export Node, ExNode, Leaf, PLeaf
+export Block, Trap, Loc, Sym, Plain, toex
 
 
 # ---- Env: analysis-time scope -----------------------------------------------
@@ -38,15 +38,45 @@ add_assigned(env::LocalEnv, sym::Symbol) = add(env.assigned, sym)
 
 
 # ---- Extended AST nodes that can be produced by decorate() ------------------
-abstract Trap  # nodes that should invoke trap(node, scope)
 
-type Block;           args::Vector; env::Env;          end # :block with Env
-type Sym;             ex::Symbol;   env::Env;          end # Symbol with Env
-type Leaf{T};         ex::T;                           end # Unexpanded node
-type Loc{T} <: Trap;  ex::T; line::Int; file::String;  end # Trap location
-Loc{T}(ex::T, line, file) = Loc{T}(ex, line, string(file))
-Loc{T}(ex::T, line)       = Loc{T}(ex, line, "")
-get_head(ex::Block) = :block
-get_head(ex::Expr)  = ex.head
+# Additional ExNode head types
+type Block;  env::Env;  end
+
+toex(head::Symbol, args) = expr(head,   args...)
+toex(head::Block,  args) = expr(:block, args...)
+
+# Leaf head types
+abstract Trap
+
+type Plain; end # Plain leaf
+type Sym;  env::Env;  end # Symbol with Env
+type Loc <: Trap;  line::Int; file::String;  end # Trap location
+Loc(line, file) = Loc(line, string(file))
+Loc(line)       = Loc(line, "")
+
+
+abstract Node
+
+# node with args
+type ExNode{H} <: Node
+    parent::Union(ExNode, Nothing)
+    head::H
+    args::Vector{Node}    
+
+    ExNode(head, args) = new(nothing, head, Node[args...])
+end
+ExNode{T}(head::T, args) = ExNode{T}(head, args)
+
+type Leaf{H,T} <: Node
+    parent::Union(ExNode, Nothing)
+    head::H
+    ex::T
+
+    Leaf(head, ex) = new(nothing, head, ex)
+end
+Leaf{H,T}(head::H, ex::T) = Leaf{H,T}(head, ex)
+Leaf(ex)                  = Leaf(Plain(), ex)
+
+typealias PLeaf{T} Leaf{Plain,T}
 
 end # module
