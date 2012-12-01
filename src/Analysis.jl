@@ -13,14 +13,14 @@ export analyze
 # ---- Helpers ----------------------------------------------------------------
 
 is_linenumber(ex::LineNumberNode) = true
-is_linenumber(ex::Expr)           = is(headof(ex), :line)
+is_linenumber(ex::Ex)             = is(headof(ex), :line)
 is_linenumber(ex)                 = false
 
 is_file_linenumber(ex)            = is_expr(ex, :line, 2)
 
-get_linenumber(ex::Expr)           = argof(ex,1)
+get_linenumber(ex::Ex)             = argof(ex,1)
 get_linenumber(ex::LineNumberNode) = ex.line
-get_sourcefile(ex::Expr)           = string(argof(ex,2))
+get_sourcefile(ex::Ex)             = string(argof(ex,2))
 
 const dict_comprehension        = symbol("dict-comprehension")
 const typed_comprehension       = symbol("typed-comprehension")
@@ -55,7 +55,7 @@ leaf(ex::Trap) = ex
 function decorate(states::Vector, args::Vector) 
     {decorate(s, arg) for (s, arg) in zip(states, args)}
 end
-decorate(states::Vector, ex::Expr) = expr(headof(ex), decorate(states, argsof(ex)))
+decorate(states::Vector, ex::Ex) = ExNode(headof(ex), decorate(states, argsof(ex)))
 
 decorate(s::State,       ex)                 = leaf(ex)
 decorate(s::SimpleState, ex::LineNumberNode) = LocNode(ex, ex.line)
@@ -72,7 +72,7 @@ type SplitDef <: State;
     rs::Env;
 end
 decorate(s::SplitDef, ex) = decorate(Def(s.ls), ex)
-function decorate(s::SplitDef, ex::Expr)
+function decorate(s::SplitDef, ex::Ex)
     head, nargs = headof(ex), nargsof(ex)
     if     head === :(=);   decorate([Def(s.ls), Rhs(s.rs)],                ex)
     elseif head === :(<:);  decorate([s,         Rhs(s.ls)],                ex)
@@ -86,7 +86,7 @@ type Sig  <: State;
     s::SimpleState;  # state with outer Env, to define/assign f
     inner::Env;      # Env inside the method
 end
-function decorate(s::Sig, ex::Expr)
+function decorate(s::Sig, ex::Ex)
     @assert contains([:call, :curly], headof(ex))
     if is_expr(argof(ex,1), :curly) first = s;
     else; first = (isa(s.s,Def) ? s.s : Lhs(s.s.env));
@@ -133,7 +133,7 @@ function argstates(state::SimpleState, ex)
     end
 end
 
-function decorate(state::SimpleState, ex::Expr)
+function decorate(state::SimpleState, ex::Ex)
     head, args  = headof(ex), argsof(ex)
     if head === :line;                     return LocNode(ex, args...)
     elseif contains([:quote, :top], head); return leaf(ex)
@@ -141,7 +141,7 @@ function decorate(state::SimpleState, ex::Expr)
     end
 
     states = argstates(state, ex)
-    if head === :block; BlockNode(decorate(states, args), raw(state.env))
+    if head === :block; BlockNode(raw(state.env), decorate(states, args))
     else                decorate(states, ex)
     end
 end
@@ -151,7 +151,7 @@ end
 ## set_source!(): propagate source file info ##
 set_source!(ex,       file::String) = nothing
 set_source!(ex::LocNode, file::String) = (ex.file = file)
-function set_source!(ex::Union(Expr,BlockNode), file::String)
+function set_source!(ex::Ex, file::String)
     for arg in argsof(ex)
         if isa(arg, LocNode) && arg.file != ""; file = arg.file; end
         set_source!(arg, file)
@@ -161,7 +161,7 @@ end
 ## postprocess_env!: find defined symbols among assigned ##
 postprocess_env!(envs::Set{LocalEnv}, ex) = nothing
 postprocess_env!(envs::Set{LocalEnv}, ex::SymNode)=postprocess_env!(envs,envof(ex))
-function postprocess_env!(envs::Set{LocalEnv}, ex::Union(Expr,BlockNode))
+function postprocess_env!(envs::Set{LocalEnv}, ex::Ex)
     if isa(ex, BlockNode);  postprocess_env!(envs, envof(ex)); end
     for arg in argsof(ex); postprocess_env!(envs, arg);    end
 end
