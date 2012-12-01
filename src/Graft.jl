@@ -65,7 +65,7 @@ function instrument(trap_ex, ex)
 end
 
 instrument(c::Context, node::Union(PLeaf,SymNode)) = exof(node)
-function instrument(c::Context, ex::Expr)
+function instrument(c::Context, ex::Ex)
     expr(headof(ex), {instrument(c, arg) for arg in argsof(ex)})
 end
 function instrument(c::Context, ex::BlockNode)
@@ -117,7 +117,7 @@ function graft(s::LocalScope, ex::SymNode)
     sym = exof(ex)
     (has(s,sym) && !has(envof(ex),sym)) ? expr(:call,quot(getter(s,sym))) : sym
 end
-function graft(s::LocalScope, ex::Union(Expr, BlockNode))
+function graft(s::LocalScope, ex::Ex)
     head, args = headof(ex), argsof(ex)
     if head == :(=)
         lhs, rhs = args

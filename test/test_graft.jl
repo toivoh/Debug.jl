@@ -28,7 +28,7 @@ end
 cut_grafts(ex) = (grafts = {}; (cut_grafts!(grafts, ex), grafts))
 
 cut_grafts!(grafts::Vector, ex) = ex
-function cut_grafts!(grafts::Vector, ex::Expr)
+function cut_grafts!(grafts::Vector, ex::Ex)
     code = {}
     for arg in argsof(ex)
         if Debug.Analysis.is_linenumber(arg)

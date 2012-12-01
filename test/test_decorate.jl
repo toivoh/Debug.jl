@@ -30,7 +30,7 @@ macro syms(args...)
 end
 
 rebuild(node::Union(PLeaf,SymNode,LocNode)) = exof(node)
-rebuild(ex::Expr) = expr(headof(ex), {rebuild(arg) for arg in argsof(ex)})
+rebuild(ex::Ex) = expr(headof(ex), {rebuild(arg) for arg in argsof(ex)})
 function rebuild(block::BlockNode)
     env = envof(block)
     for arg in argsof(block)
