@@ -48,15 +48,59 @@ LocNode{T}(ex::T, line, file) = LocNode{T}(ex, line, string(file))
 LocNode{T}(ex::T, line)       = LocNode{T}(ex, line, "")
 
 
+abstract Node
+
+type ExNode{T} <: Node
+    parent::Union(ExNode, Nothing)
+    format::T
+    args::Vector{Node}
+
+    ExNode(format::T, args) = new(nothing, format, Node[args...])
+    ExNode(args...) = ExNode(T(args[1:end-1]), args[end])
+end
+ExNode{T}(format::T, args) = ExNode{T}(format, args)
+
+typealias Ex Union(Expr, ExNode, BlockNode)
+#typealias Ex Union(Expr, ExNode)
+
+type Block;  env::Env;  end
+#typealias BlockNode ExNode{Block}
+
+type Leaf{T} <: Node
+    parent::Union(ExNode, Nothing)
+    format::T
+
+    Leaf(format::T) = new(nothing, format)
+    Leaf(args...) = Leaf(T(args))
+end
+
+type Plain;  ex; end
+type Sym;    ex::Symbol; env::Env;  end
+type Loc{T}  ex::T; line::Int; file::String;  end
+Loc{T}(ex::T, line, file) = Loc{T}(ex, line, string(file))
+Loc{T}(ex::T, line)       = Loc{T}(ex, line, "")
+
+# typealias PLeaf   Leaf{Plain}
+# typealias SymNode Leaf{Sym}
+# typealias LocNode Leaf{Loc}
+
+parentof(ex::Node) = ex.parent
+
 headof(ex::BlockNode) = :block
 headof(ex::Expr)      = ex.head
+headof(ex::ExNode{Symbol}) = ex.format
 
-argsof(ex::Union(Expr,BlockNode)) = ex.args
+argsof(ex::Ex) = ex.args
 nargsof(ex)  = length(argsof(ex))
 argof(ex, k) = argsof(ex)[k]
 
-envof(ex::Union(BlockNode,SymNode)) = ex.env
-exof(ex::Union(PLeaf,LocNode,SymNode))  = ex.ex
+envof(ex::Union(BlockNode,SymNode)) = ex.env ##
+envof(node::Union(ExNode, Leaf)) = envof(node.format)
+envof(fmt::Union(Block, Sym))    = fmt.env
+
+exof(ex::Union(PLeaf,LocNode,SymNode))  = ex.ex ##
+exof(node::Leaf) = exof(node.format)
+exof(fmt::Union(Sym, Loc)) = fmt.ex
 
 
 end # module
