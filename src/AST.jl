@@ -10,6 +10,7 @@ import Base.has, Base.show
 export Env, LocalEnv, NoEnv, child, add_assigned, add_defined
 export Node, ExNode, Leaf, PLeaf
 export Block, Trap, Loc, Sym, Plain, toex
+export is_trap
 
 
 # ---- Env: analysis-time scope -----------------------------------------------
@@ -78,5 +79,8 @@ Leaf{H,T}(head::H, ex::T) = Leaf{H,T}(head, ex)
 Leaf(ex)                  = Leaf(Plain(), ex)
 
 typealias PLeaf{T} Leaf{Plain,T}
+
+is_trap(::Node)                 = false
+is_trap{H<:Trap}(node::Leaf{H}) = true
 
 end # module
