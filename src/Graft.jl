@@ -37,7 +37,7 @@ assign(scope::LocalScope, x,  sym::Symbol) = setter(scope, sym)(x)
 
 # ---- instrument -------------------------------------------------------------
 # Add Scope creation and debug traps to (analyzed) code
-# A call to trap() is added after every AST.Loc (expr(:line) / LineNumberNode)
+# A call to trap() is added after every AST.LocNode (expr(:line) / LineNumberNode)
 
 type Context
     trap_ex
@@ -64,11 +64,11 @@ function instrument(trap_ex, ex)
     instrument(Context(trap_ex, NoEnv(), quot(NoScope())), ex)
 end
 
-instrument(c::Context, node::Union(Leaf,Sym)) = exof(node)
+instrument(c::Context, node::Union(PLeaf,SymNode)) = exof(node)
 function instrument(c::Context, ex::Expr)
     expr(headof(ex), {instrument(c, arg) for arg in argsof(ex)})
 end
-function instrument(c::Context, ex::Block)
+function instrument(c::Context, ex::BlockNode)
     code = {}
 
     if isa(envof(ex), LocalEnv) && is_expr(envof(ex).source, :type)
@@ -89,7 +89,7 @@ function instrument(c::Context, ex::Block)
     
     for arg in argsof(ex)
         if isa(arg, Trap)
-            if isa(arg, Loc);  push(code, exof(arg))  end
+            if isa(arg, LocNode);  push(code, exof(arg))  end
             push(code, :($(c.trap_ex)($(quot(arg)), $(c.scope_ex))) )
         else
             push(code, instrument(c, arg))
@@ -112,16 +112,16 @@ const updating_ops = {
  :>>>= => :>>>}
 
 graft(s::LocalScope, ex)                    = ex
-graft(s::LocalScope, node::Union(Leaf,Loc)) = exof(node)
-function graft(s::LocalScope, ex::Sym)
+graft(s::LocalScope, node::Union(PLeaf,LocNode)) = exof(node)
+function graft(s::LocalScope, ex::SymNode)
     sym = exof(ex)
     (has(s,sym) && !has(envof(ex),sym)) ? expr(:call,quot(getter(s,sym))) : sym
 end
-function graft(s::LocalScope, ex::Union(Expr, Block))
+function graft(s::LocalScope, ex::Union(Expr, BlockNode))
     head, args = headof(ex), argsof(ex)
     if head == :(=)
         lhs, rhs = args
-        if isa(lhs, Sym)             # assignment to symbol
+        if isa(lhs, SymNode)             # assignment to symbol
             rhs = graft(s, rhs)
             sym = exof(lhs)
             if has(envof(lhs), sym) || !has(s.env.assigned, sym); return :($sym = $rhs)
@@ -129,14 +129,15 @@ function graft(s::LocalScope, ex::Union(Expr, Block))
             else; error("No setter in scope found for $(sym)!")
             end
         elseif is_expr(lhs, :tuple)  # assignment to tuple
-            tup = Leaf(gensym("tuple")) # don't recurse into tup
+            tup = PLeaf(gensym("tuple")) # don't recurse into tup
             return graft(s, expr(:block,
                  :($tup  = $rhs    ),
                 {:($dest = $tup[$k]) for (k,dest)=enumerate(argsof(lhs))}...))
-        elseif is_expr(lhs, [:ref, :.]) || isa(lhs, Leaf) # need no lhs rewrite
+        elseif is_expr(lhs, [:ref, :.]) || isa(lhs, PLeaf)# need no lhs rewrite
         else error("graft: not implemented: $ex")       
         end  
-    elseif has(updating_ops, head) && isa(args[1], Sym)  # x+=y ==> x=x+y etc.
+    elseif has(updating_ops, head) && isa(args[1], SymNode)
+        # x+=y ==> x=x+y etc.
         op = updating_ops[head]
         return graft(s, :( $(args[1]) = ($op)($(args[1]), $(args[2])) ))
     end        

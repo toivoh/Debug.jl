@@ -15,7 +15,7 @@ end
 
 dostep = false
 trap(::BreakPoint, scope::Scope) = (global dostep = true)
-function trap(loc::Loc, scope::Scope)
+function trap(loc::LocNode, scope::Scope)
     global dostep
     if !dostep; return; end
     print("\nat ", loc.file, ":", loc.line)

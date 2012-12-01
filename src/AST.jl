@@ -8,7 +8,7 @@ using Base
 import Base.has, Base.show
 
 export Env, LocalEnv, NoEnv, child, add_assigned, add_defined
-export Trap, Loc, Leaf, Sym, Block
+export Trap, LocNode, PLeaf, SymNode, BlockNode
 export headof, argsof, argof, nargsof, envof, exof
 
 
@@ -40,24 +40,23 @@ add_assigned(env::LocalEnv, sym::Symbol) = add(env.assigned, sym)
 # ---- Extended AST nodes that can be produced by decorate() ------------------
 abstract Trap  # nodes that should invoke trap(node, scope)
 
-type Block;           args::Vector; env::Env;          end # :block with Env
-type Sym;             ex::Symbol;   env::Env;          end # Symbol with Env
-type Leaf{T};         ex::T;                           end # Unexpanded node
-type Loc{T} <: Trap;  ex::T; line::Int; file::String;  end # Trap location
-Loc{T}(ex::T, line, file) = Loc{T}(ex, line, string(file))
-Loc{T}(ex::T, line)       = Loc{T}(ex, line, "")
+type BlockNode;       args::Vector; env::Env;          end # :block with Env
+type SymNode;         ex::Symbol;   env::Env;          end # Symbol with Env
+type PLeaf{T};        ex::T;                           end # Unexpanded node
+type LocNode{T} <: Trap;  ex::T; line::Int; file::String;  end # Trap location
+LocNode{T}(ex::T, line, file) = LocNode{T}(ex, line, string(file))
+LocNode{T}(ex::T, line)       = LocNode{T}(ex, line, "")
 
 
-headof(ex::Block) = :block
-headof(ex::Expr) = ex.head
+headof(ex::BlockNode) = :block
+headof(ex::Expr)      = ex.head
 
-argsof(ex::Union(Expr,Block)) = ex.args
+argsof(ex::Union(Expr,BlockNode)) = ex.args
 nargsof(ex)  = length(argsof(ex))
 argof(ex, k) = argsof(ex)[k]
 
-envof(ex::Union(Block,Sym)) = ex.env
-
-exof(ex::Union(Leaf,Loc,Sym))    = ex.ex
+envof(ex::Union(BlockNode,SymNode)) = ex.env
+exof(ex::Union(PLeaf,LocNode,SymNode))  = ex.ex
 
 
 end # module

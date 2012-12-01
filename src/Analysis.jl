@@ -31,7 +31,7 @@ const typed_comprehensions =   [typed_comprehension, typed_dict_comprehension]
 
 
 # ---- decorate(): add scoping info to AST ------------------------------------
-# Rewrites AST, exchanging some Expr:s etc for Block/Sym/Leaf/Loc
+# Rewrites AST, exchanging some Expr:s etc for BlockNode/SymNode/PLeaf/LocNode
 # to include scope/other relevant info and to classify nodes.
 
 abstract State
@@ -49,7 +49,7 @@ end
 raw(env::TypeEnv) = env.env
 raw(env::Env)     = env
 
-leaf(ex)       = Leaf(ex)
+leaf(ex)       = PLeaf(ex)
 leaf(ex::Trap) = ex
 
 function decorate(states::Vector, args::Vector) 
@@ -58,11 +58,11 @@ end
 decorate(states::Vector, ex::Expr) = expr(headof(ex), decorate(states, argsof(ex)))
 
 decorate(s::State,       ex)                 = leaf(ex)
-decorate(s::SimpleState, ex::LineNumberNode) = Loc(ex, ex.line)
+decorate(s::SimpleState, ex::LineNumberNode) = LocNode(ex, ex.line)
 decorate(s::SimpleState, ex::SymbolNode)     = decorate(s, ex.name)
-decorate(s::Def, ex::Symbol) = (add_defined( s.env, ex); Sym(ex,raw(s.env)))
-decorate(s::Lhs, ex::Symbol) = (add_assigned(s.env, ex); Sym(ex,raw(s.env)))
-decorate(s::SimpleState, ex::Symbol) = Sym(ex,raw(s.env))
+decorate(s::Def, ex::Symbol) = (add_defined( s.env,ex); SymNode(ex,raw(s.env)))
+decorate(s::Lhs, ex::Symbol) = (add_assigned(s.env,ex); SymNode(ex,raw(s.env)))
+decorate(s::SimpleState, ex::Symbol) = SymNode(ex,raw(s.env))
 
 # SplitDef: Def with different scopes for left and right side, e.g.
 # let x_inner = y_outer
@@ -135,13 +135,13 @@ end
 
 function decorate(state::SimpleState, ex::Expr)
     head, args  = headof(ex), argsof(ex)
-    if head === :line;                     return Loc(ex, args...)
+    if head === :line;                     return LocNode(ex, args...)
     elseif contains([:quote, :top], head); return leaf(ex)
     elseif head === :macrocall; return decorate(state, macroexpand(ex))
     end
 
     states = argstates(state, ex)
-    if head === :block; Block(decorate(states, args), raw(state.env))
+    if head === :block; BlockNode(decorate(states, args), raw(state.env))
     else                decorate(states, ex)
     end
 end
@@ -150,19 +150,19 @@ end
 
 ## set_source!(): propagate source file info ##
 set_source!(ex,       file::String) = nothing
-set_source!(ex::Loc, file::String) = (ex.file = file)
-function set_source!(ex::Union(Expr,Block), file::String)
+set_source!(ex::LocNode, file::String) = (ex.file = file)
+function set_source!(ex::Union(Expr,BlockNode), file::String)
     for arg in argsof(ex)
-        if isa(arg, Loc) && arg.file != ""; file = arg.file; end
+        if isa(arg, LocNode) && arg.file != ""; file = arg.file; end
         set_source!(arg, file)
     end
 end
 
 ## postprocess_env!: find defined symbols among assigned ##
 postprocess_env!(envs::Set{LocalEnv}, ex) = nothing
-postprocess_env!(envs::Set{LocalEnv}, ex::Sym)=postprocess_env!(envs,envof(ex))
-function postprocess_env!(envs::Set{LocalEnv}, ex::Union(Expr,Block))
-    if isa(ex, Block);  postprocess_env!(envs, envof(ex)); end
+postprocess_env!(envs::Set{LocalEnv}, ex::SymNode)=postprocess_env!(envs,envof(ex))
+function postprocess_env!(envs::Set{LocalEnv}, ex::Union(Expr,BlockNode))
+    if isa(ex, BlockNode);  postprocess_env!(envs, envof(ex)); end
     for arg in argsof(ex); postprocess_env!(envs, arg);    end
 end
 
@@ -176,7 +176,7 @@ function postprocess_env!(envs::Set{LocalEnv}, env::LocalEnv)
     env.assigned = env.defined | p_assigned
 end
 
-# ---- analyze(): decorate and then propagate source file info among Loc's ---
+# ---- analyze(): decorate and then propagate source file info among LocNode's
 
 analyze(ex, process_envs::Bool) = analyze(Rhs(NoEnv()), ex, process_envs)
 analyze(env::Env, ex, process_envs::Bool) = analyze(Rhs(env), ex, process_envs)
