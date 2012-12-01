@@ -29,20 +29,22 @@ macro syms(args...)
     end
 end
 
-rebuild(node::Union(PLeaf,SymNode,LocNode)) = exof(node)
+rebuild(node::Leaf) = exof(node)
 rebuild(ex::Ex) = expr(headof(ex), {rebuild(arg) for arg in argsof(ex)})
 function rebuild(block::BlockNode)
     env = envof(block)
     for arg in argsof(block)
-        if isa(arg, PLeaf{BlockEnv})
-            if !(env.defined == exof(arg).defined)
-                error("env.defined = $(env.defined) != $(exof(arg).defined)")
+        if !isa(arg, PLeaf);  continue  end
+        ex = exof(arg)
+        if isa(ex, BlockEnv)
+            if !(env.defined == ex.defined)
+                error("env.defined = $(env.defined) != $(ex.defined)")
             end
             just_assigned = env.assigned - env.defined
-            if !(just_assigned == exof(arg).assigned)
+            if !(just_assigned == ex.assigned)
                 error("just_assigned = $(just_assigned) != $(exof(arg).assigned)")
             end
-        elseif isa(arg, PLeaf{NoEnv})
+        elseif isa(ex, NoEnv)
             @assert isa(env, NoEnv)
         end
     end

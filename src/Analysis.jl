@@ -49,8 +49,9 @@ end
 raw(env::TypeEnv) = env.env
 raw(env::Env)     = env
 
-leaf(ex)       = PLeaf(ex)
-leaf(ex::Trap) = ex
+# leaf(ex)       = PLeaf(ex)
+# leaf(ex::Trap) = ex
+leaf(ex) = is_trap(ex) ? Leaf(ex) : PLeaf(ex)
 
 function decorate(states::Vector, args::Vector) 
     {decorate(s, arg) for (s, arg) in zip(states, args)}
@@ -150,10 +151,12 @@ end
 
 ## set_source!(): propagate source file info ##
 set_source!(ex,       file::String) = nothing
-set_source!(ex::LocNode, file::String) = (ex.file = file)
+set_source!(ex::LocNode, file::String) = (ex.format.file = file)
 function set_source!(ex::Ex, file::String)
     for arg in argsof(ex)
-        if isa(arg, LocNode) && arg.file != ""; file = arg.file; end
+        if isa(arg, LocNode) && arg.format.file != ""
+            file = arg.format.file
+        end
         set_source!(arg, file)
     end
 end

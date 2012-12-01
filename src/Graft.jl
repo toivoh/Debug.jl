@@ -64,6 +64,7 @@ function instrument(trap_ex, ex)
     instrument(Context(trap_ex, NoEnv(), quot(NoScope())), ex)
 end
 
+instrument(c::Context, ex) = ex # todo: remove?
 instrument(c::Context, node::Union(PLeaf,SymNode)) = exof(node)
 function instrument(c::Context, ex::Ex)
     expr(headof(ex), {instrument(c, arg) for arg in argsof(ex)})
@@ -73,7 +74,7 @@ function instrument(c::Context, ex::BlockNode)
 
     if isa(envof(ex), LocalEnv) && is_expr(envof(ex).source, :type)
         for arg in argsof(ex)        
-            if !isa(arg, Trap);  push(code, instrument(c, arg));  end
+            if !is_trap(arg);  push(code, instrument(c, arg));  end
         end
         return expr(:block, code)
     end
@@ -88,9 +89,9 @@ function instrument(c::Context, ex::BlockNode)
     end
     
     for arg in argsof(ex)
-        if isa(arg, Trap)
+        if is_trap(arg)
             if isa(arg, LocNode);  push(code, exof(arg))  end
-            push(code, :($(c.trap_ex)($(quot(arg)), $(c.scope_ex))) )
+            push(code, :($(c.trap_ex)($(quot(arg.format)), $(c.scope_ex))) )
         else
             push(code, instrument(c, arg))
         end

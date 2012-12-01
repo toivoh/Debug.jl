@@ -3,7 +3,7 @@ include(find_in_path("Debug.jl"))
 module TestMacroTrap
 using Base, Debug
 
-function trap(loc::LocNode, scope::Scope)
+function trap(loc::Loc, scope::Scope)
     if loc.line == 15
         @assert scope[:z] == 3
         scope[:z] = 4

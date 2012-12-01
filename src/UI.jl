@@ -5,9 +5,11 @@
 
 module UI
 using Base, Meta, AST, Eval
+import AST.is_trap
 export trap, @bp
 
-type BreakPoint <: Trap; end
+type BreakPoint; end
+is_trap(::BreakPoint) = true
 
 macro bp()
     BreakPoint()

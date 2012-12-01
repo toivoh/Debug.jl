@@ -8,9 +8,11 @@ using Base
 import Base.has, Base.show
 
 export Env, LocalEnv, NoEnv, child, add_assigned, add_defined
-export Trap, LocNode, PLeaf, SymNode, BlockNode
+export LocNode, PLeaf, SymNode, BlockNode
+export Loc
 export headof, argsof, argof, nargsof, envof, exof
-export Ex, Node, ExNode
+export Ex, Node, ExNode, Leaf
+export is_trap
 
 
 # ---- Env: analysis-time scope -----------------------------------------------
@@ -42,11 +44,11 @@ add_assigned(env::LocalEnv, sym::Symbol) = add(env.assigned, sym)
 abstract Trap  # nodes that should invoke trap(node, scope)
 
 #type BlockNode;       args::Vector; env::Env;          end # :block with Env
-type SymNode;         ex::Symbol;   env::Env;          end # Symbol with Env
-type PLeaf{T};        ex::T;                           end # Unexpanded node
-type LocNode{T} <: Trap;  ex::T; line::Int; file::String;  end # Trap location
-LocNode{T}(ex::T, line, file) = LocNode{T}(ex, line, string(file))
-LocNode{T}(ex::T, line)       = LocNode{T}(ex, line, "")
+# type SymNode;         ex::Symbol;   env::Env;          end # Symbol with Env
+# type PLeaf{T};        ex::T;                           end # Unexpanded node
+# type LocNode{T} <: Trap;  ex::T; line::Int; file::String;  end # Trap location
+# LocNode{T}(ex::T, line, file) = LocNode{T}(ex, line, string(file))
+# LocNode{T}(ex::T, line)       = LocNode{T}(ex, line, "")
 
 
 abstract Node
@@ -75,8 +77,9 @@ type Leaf{T} <: Node
     format::T
 
     Leaf(format::T) = new(nothing, format)
-    Leaf(args...) = Leaf(T(args))
+    Leaf(args...)   = new(nothing, T(args...))
 end
+Leaf{T}(format::T) = Leaf{T}(format)
 
 type Plain;  ex; end
 type Sym;    ex::Symbol; env::Env;  end
@@ -84,9 +87,9 @@ type Loc{T}  ex::T; line::Int; file::String;  end
 Loc{T}(ex::T, line, file) = Loc{T}(ex, line, string(file))
 Loc{T}(ex::T, line)       = Loc{T}(ex, line, "")
 
-# typealias PLeaf   Leaf{Plain}
-# typealias SymNode Leaf{Sym}
-# typealias LocNode Leaf{Loc}
+typealias PLeaf   Leaf{Plain}
+typealias SymNode Leaf{Sym}
+typealias LocNode Leaf{Loc}
 
 parentof(ex::Node) = ex.parent
 
@@ -99,13 +102,15 @@ nargsof(ex)  = length(argsof(ex))
 argof(ex, k) = argsof(ex)[k]
 
 #envof(ex::Union(BlockNode,SymNode)) = ex.env ##
-envof(ex::SymNode) = ex.env ##
+#envof(ex::SymNode) = ex.env ##
 envof(node::Union(ExNode, Leaf)) = envof(node.format)
 envof(fmt::Union(Block, Sym))    = fmt.env
 
-exof(ex::Union(PLeaf,LocNode,SymNode))  = ex.ex ##
+#exof(ex::Union(PLeaf,LocNode,SymNode))  = ex.ex ##
 exof(node::Leaf) = exof(node.format)
-exof(fmt::Union(Sym, Loc)) = fmt.ex
+exof(fmt::Union(Plain, Sym, Loc)) = fmt.ex
 
+is_trap(ex)        = false
+is_trap(::LocNode) = true
 
 end # module
