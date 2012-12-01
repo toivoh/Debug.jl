@@ -60,37 +60,37 @@ function code_scope(scopesym::Symbol, parent, env::Env, syms)
     ))
 end
 
-function instrument(trap_ex, ex)
-    instrument(Context(trap_ex, NoEnv(), quot(NoScope())), ex)
+function instrument(trap_ex, node)
+    instrument(Context(trap_ex, NoEnv(), quot(NoScope())), node)
 end
 
-instrument(c::Context, node::Union(Leaf,Sym)) = node.ex
-function instrument(c::Context, ex::Expr)
-    expr(ex.head, {instrument(c, arg) for arg in ex.args})
+instrument(c::Context, node::Leaf) = node.ex
+function instrument(c::Context, node::ExNode)
+    toex(node.head, {instrument(c, arg) for arg in node.args})
 end
-function instrument(c::Context, ex::Block)
-    code = {}
+function instrument(c::Context, node::ExNode{Block})
+    code, env = {}, node.head.env
 
-    if isa(ex.env, LocalEnv) && is_expr(ex.env.source, :type)
-        for arg in ex.args        
-            if !isa(arg, Trap);  push(code, instrument(c, arg));  end
+    if isa(env, LocalEnv) && is_expr(env.source, :type)
+        for arg in node.args        
+            if !isa(arg, Leaf{Trap});  push(code, instrument(c, arg));  end
         end
         return expr(:block, code)
     end
 
-    if !is(ex.env, c.env)
-        syms, e = Set{Symbol}(), ex.env
+    if !is(env, c.env)
+        syms, e = Set{Symbol}(), env
         while !is(e, c.env);  add_each(syms, e.defined); e = e.parent;  end
 
         name = gensym("scope")
-        push(code, code_scope(name, c.scope_ex, ex.env, syms))
-        c = Context(c.trap_ex, ex.env, name)
+        push(code, code_scope(name, c.scope_ex, env, syms))
+        c = Context(c.trap_ex, env, name)
     end
     
-    for arg in ex.args
-        if isa(arg, Trap)
-            if isa(arg, Loc);  push(code, arg.ex)  end
-            push(code, :($(c.trap_ex)($(quot(arg)), $(c.scope_ex))) )
+    for arg in node.args
+        if is_trap(arg)
+            if isa(arg, Leaf{Loc});  push(code, arg.ex)  end
+            push(code, :($(c.trap_ex)($(quot(arg.head)), $(c.scope_ex))) )
         else
             push(code, instrument(c, arg))
         end
@@ -112,35 +112,38 @@ const updating_ops = {
  :>>>= => :>>>}
 
 graft(s::LocalScope, ex)                     = ex
-graft(s::LocalScope, node::Union(Leaf,Loc)) = node.ex
-function graft(s::LocalScope, ex::Sym)
-    sym = ex.ex
-    (has(s, sym) && !has(ex.env, sym)) ? expr(:call, quot(getter(s,sym))) : sym
+graft(s::LocalScope, node::Leaf) = node.ex
+function graft(s::LocalScope, node::Leaf{Sym})
+    sym, env = node.ex, node.head.env
+    (has(s, sym) && !has(env, sym)) ? expr(:call, quot(getter(s,sym))) : sym
 end
-function graft(s::LocalScope, ex::Union(Expr, Block))
-    head, args = get_head(ex), ex.args
+function graft(s::LocalScope, node::ExNode)
+    head, args = node.head, node.args
     if head == :(=)
-        lhs, rhs = args
-        if isa(lhs, Sym)             # assignment to symbol
+        (lhs, rhs) = args
+        if isa(lhs, Leaf{Sym})       # assignment to symbol
             rhs = graft(s, rhs)
             sym = lhs.ex
-            if has(lhs.env, sym) || !has(s.env.assigned, sym); return :($sym = $rhs)
-            elseif has(s, sym);   return expr(:call, quot(setter(s,sym)), rhs)
+            if has(lhs.head.env, sym) || !has(s.env.assigned, sym)
+                return :($sym = $rhs)
+            elseif has(s, sym); return expr(:call, quot(setter(s,sym)), rhs)
             else; error("No setter in scope found for $(sym)!")
             end
         elseif is_expr(lhs, :tuple)  # assignment to tuple
             tup = Leaf(gensym("tuple")) # don't recurse into tup
-            return graft(s, expr(:block,
-                 :( $tup  = $rhs     ),
-                {:( $dest = $tup[$k] ) for (k,dest)=enumerate(lhs.args)}...))
-        elseif is_expr(lhs, [:ref, :.]) || isa(lhs, Leaf) # need no lhs rewrite
+            return graft(s, Node(:block, # should be ok to use instead of Block
+                 Node(:(=), {tup, rhs}),
+                {Node(:(=), {dest, Node(:ref, {rhs, k}) })
+                     for (k,dest)=enumerate(lhs.args)}...))
+        elseif is_expr(lhs, [:ref, :.]) || isa(lhs, PLeaf)# need no lhs rewrite
         else error("graft: not implemented: $ex")       
         end  
-    elseif has(updating_ops, head) && isa(args[1], Sym)  # x+=y ==> x=x+y etc.
-        op = updating_ops[head]
-        return graft(s, :( $(args[1]) = ($op)($(args[1]), $(args[2])) ))
+    elseif isa(head,Symbol) && has(updating_ops,head) && isa(args[1],Leaf{Sym})
+        # x+=y ==> x=x+y etc.
+        op = updating_ops[head] 
+        return graft(s, Node(:(=), {args[1], Node(:call, {op, args...}) }) )
     end        
-    expr(head, {graft(s,arg) for arg in args})
+    toex(head, {graft(s,arg) for arg in args})
 end
 
 end # module
