@@ -13,14 +13,14 @@ export analyze
 # ---- Helpers ----------------------------------------------------------------
 
 is_linenumber(ex::LineNumberNode) = true
-is_linenumber(ex::Expr)           = is(ex.head, :line)
+is_linenumber(ex::Expr)           = is(headof(ex), :line)
 is_linenumber(ex)                 = false
 
 is_file_linenumber(ex)            = is_expr(ex, :line, 2)
 
-get_linenumber(ex::Expr)           = ex.args[1]
+get_linenumber(ex::Expr)           = argof(ex,1)
 get_linenumber(ex::LineNumberNode) = ex.line
-get_sourcefile(ex::Expr)           = string(ex.args[2])
+get_sourcefile(ex::Expr)           = string(argof(ex,2))
 
 const dict_comprehension        = symbol("dict-comprehension")
 const typed_comprehension       = symbol("typed-comprehension")
@@ -55,7 +55,7 @@ leaf(ex::Trap) = ex
 function decorate(states::Vector, args::Vector) 
     {decorate(s, arg) for (s, arg) in zip(states, args)}
 end
-decorate(states::Vector, ex::Expr) = expr(ex.head, decorate(states, ex.args))
+decorate(states::Vector, ex::Expr) = expr(headof(ex), decorate(states, argsof(ex)))
 
 decorate(s::State,       ex)                 = leaf(ex)
 decorate(s::SimpleState, ex::LineNumberNode) = Loc(ex, ex.line)
@@ -73,7 +73,7 @@ type SplitDef <: State;
 end
 decorate(s::SplitDef, ex) = decorate(Def(s.ls), ex)
 function decorate(s::SplitDef, ex::Expr)
-    head, nargs = ex.head, length(ex.args)
+    head, nargs = headof(ex), nargsof(ex)
     if     head === :(=);   decorate([Def(s.ls), Rhs(s.rs)],                ex)
     elseif head === :(<:);  decorate([s,         Rhs(s.ls)],                ex)
     elseif head === :curly; decorate([s,         fill(Def(s.rs), nargs-1)], ex)
@@ -87,17 +87,17 @@ type Sig  <: State;
     inner::Env;      # Env inside the method
 end
 function decorate(s::Sig, ex::Expr)
-    @assert contains([:call, :curly], ex.head)
-    if is_expr(ex.args[1], :curly) first = s;
+    @assert contains([:call, :curly], headof(ex))
+    if is_expr(argof(ex,1), :curly) first = s;
     else; first = (isa(s.s,Def) ? s.s : Lhs(s.s.env));
     end
-    states = [first, fill(Def(s.inner), length(ex.args)-1)]
+    states = [first, fill(Def(s.inner), nargsof(ex)-1)]
     decorate(states, ex)
 end
 
 # return a Vector of visit states for each arg of an expr(head, args)
 function argstates(state::SimpleState, ex)
-    head, args = ex.head, ex.args
+    head, args = headof(ex), argsof(ex)
     e, nargs = state.env, length(args)
 
     if contains([:function, :(=)], head) && is_expr(args[1], :call)
@@ -134,7 +134,7 @@ function argstates(state::SimpleState, ex)
 end
 
 function decorate(state::SimpleState, ex::Expr)
-    head, args  = ex.head, ex.args
+    head, args  = headof(ex), argsof(ex)
     if head === :line;                     return Loc(ex, args...)
     elseif contains([:quote, :top], head); return leaf(ex)
     elseif head === :macrocall; return decorate(state, macroexpand(ex))
@@ -152,7 +152,7 @@ end
 set_source!(ex,       file::String) = nothing
 set_source!(ex::Loc, file::String) = (ex.file = file)
 function set_source!(ex::Union(Expr,Block), file::String)
-    for arg in ex.args
+    for arg in argsof(ex)
         if isa(arg, Loc) && arg.file != ""; file = arg.file; end
         set_source!(arg, file)
     end
@@ -160,10 +160,10 @@ end
 
 ## postprocess_env!: find defined symbols among assigned ##
 postprocess_env!(envs::Set{LocalEnv}, ex) = nothing
-postprocess_env!(envs::Set{LocalEnv}, ex::Sym) = postprocess_env!(envs, ex.env)
+postprocess_env!(envs::Set{LocalEnv}, ex::Sym)=postprocess_env!(envs,envof(ex))
 function postprocess_env!(envs::Set{LocalEnv}, ex::Union(Expr,Block))
-    if isa(ex, Block);  postprocess_env!(envs, ex.env); end
-    for arg in ex.args; postprocess_env!(envs, arg);    end
+    if isa(ex, Block);  postprocess_env!(envs, envof(ex)); end
+    for arg in argsof(ex); postprocess_env!(envs, arg);    end
 end
 
 postprocess_env!(envs::Set{LocalEnv}, ::NoEnv) = nothing

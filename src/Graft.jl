@@ -64,32 +64,32 @@ function instrument(trap_ex, ex)
     instrument(Context(trap_ex, NoEnv(), quot(NoScope())), ex)
 end
 
-instrument(c::Context, node::Union(Leaf,Sym)) = node.ex
+instrument(c::Context, node::Union(Leaf,Sym)) = exof(node)
 function instrument(c::Context, ex::Expr)
-    expr(ex.head, {instrument(c, arg) for arg in ex.args})
+    expr(headof(ex), {instrument(c, arg) for arg in argsof(ex)})
 end
 function instrument(c::Context, ex::Block)
     code = {}
 
-    if isa(ex.env, LocalEnv) && is_expr(ex.env.source, :type)
-        for arg in ex.args        
+    if isa(envof(ex), LocalEnv) && is_expr(envof(ex).source, :type)
+        for arg in argsof(ex)        
             if !isa(arg, Trap);  push(code, instrument(c, arg));  end
         end
         return expr(:block, code)
     end
 
-    if !is(ex.env, c.env)
-        syms, e = Set{Symbol}(), ex.env
+    if !is(envof(ex), c.env)
+        syms, e = Set{Symbol}(), envof(ex)
         while !is(e, c.env);  add_each(syms, e.defined); e = e.parent;  end
 
         name = gensym("scope")
-        push(code, code_scope(name, c.scope_ex, ex.env, syms))
-        c = Context(c.trap_ex, ex.env, name)
+        push(code, code_scope(name, c.scope_ex, envof(ex), syms))
+        c = Context(c.trap_ex, envof(ex), name)
     end
     
-    for arg in ex.args
+    for arg in argsof(ex)
         if isa(arg, Trap)
-            if isa(arg, Loc);  push(code, arg.ex)  end
+            if isa(arg, Loc);  push(code, exof(arg))  end
             push(code, :($(c.trap_ex)($(quot(arg)), $(c.scope_ex))) )
         else
             push(code, instrument(c, arg))
@@ -111,28 +111,28 @@ const updating_ops = {
  :%= => :%,   :|= => :|,  :&= => :&,  :$= => :$,  :<<= => :<<,  :>>= => :>>,
  :>>>= => :>>>}
 
-graft(s::LocalScope, ex)                     = ex
-graft(s::LocalScope, node::Union(Leaf,Loc)) = node.ex
+graft(s::LocalScope, ex)                    = ex
+graft(s::LocalScope, node::Union(Leaf,Loc)) = exof(node)
 function graft(s::LocalScope, ex::Sym)
-    sym = ex.ex
-    (has(s, sym) && !has(ex.env, sym)) ? expr(:call, quot(getter(s,sym))) : sym
+    sym = exof(ex)
+    (has(s,sym) && !has(envof(ex),sym)) ? expr(:call,quot(getter(s,sym))) : sym
 end
 function graft(s::LocalScope, ex::Union(Expr, Block))
-    head, args = get_head(ex), ex.args
+    head, args = headof(ex), argsof(ex)
     if head == :(=)
         lhs, rhs = args
         if isa(lhs, Sym)             # assignment to symbol
             rhs = graft(s, rhs)
-            sym = lhs.ex
-            if has(lhs.env, sym) || !has(s.env.assigned, sym); return :($sym = $rhs)
+            sym = exof(lhs)
+            if has(envof(lhs), sym) || !has(s.env.assigned, sym); return :($sym = $rhs)
             elseif has(s, sym);   return expr(:call, quot(setter(s,sym)), rhs)
             else; error("No setter in scope found for $(sym)!")
             end
         elseif is_expr(lhs, :tuple)  # assignment to tuple
             tup = Leaf(gensym("tuple")) # don't recurse into tup
             return graft(s, expr(:block,
-                 :( $tup  = $rhs     ),
-                {:( $dest = $tup[$k] ) for (k,dest)=enumerate(lhs.args)}...))
+                 :($tup  = $rhs    ),
+                {:($dest = $tup[$k]) for (k,dest)=enumerate(argsof(lhs))}...))
         elseif is_expr(lhs, [:ref, :.]) || isa(lhs, Leaf) # need no lhs rewrite
         else error("graft: not implemented: $ex")       
         end  

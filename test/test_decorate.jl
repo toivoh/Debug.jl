@@ -29,29 +29,29 @@ macro syms(args...)
     end
 end
 
-reconstruct(node::Union(Leaf,Sym,Loc)) = node.ex
-reconstruct(ex::Expr) = expr(ex.head, {reconstruct(arg) for arg in ex.args})
-function reconstruct(block::Block)
-    env = block.env
-    for arg in block.args
+rebuild(node::Union(Leaf,Sym,Loc)) = exof(node)
+rebuild(ex::Expr) = expr(headof(ex), {rebuild(arg) for arg in argsof(ex)})
+function rebuild(block::Block)
+    env = envof(block)
+    for arg in argsof(block)
         if isa(arg, Leaf{BlockEnv})
-            if !(env.defined == arg.ex.defined)
-                error("env.defined = $(env.defined) != $(arg.ex.defined)")
+            if !(env.defined == exof(arg).defined)
+                error("env.defined = $(env.defined) != $(exof(arg).defined)")
             end
             just_assigned = env.assigned - env.defined
-            if !(just_assigned == arg.ex.assigned)
-                error("just_assigned = $(just_assigned) != $(arg.ex.assigned)")
+            if !(just_assigned == exof(arg).assigned)
+                error("just_assigned = $(just_assigned) != $(exof(arg).assigned)")
             end
         elseif isa(arg, Leaf{NoEnv})
             @assert isa(env, NoEnv)
         end
     end
-    expr(:block, {reconstruct(arg) for arg in block.args})
+    expr(:block, {rebuild(arg) for arg in argsof(block)})
 end
 
 function test_decorate(code)
     dcode = analyze(NoEnv(), code, false)
-    rcode = reconstruct(dcode)
+    rcode = rebuild(dcode)
     @assert rcode == code
 end
 macro test_decorate(ex)

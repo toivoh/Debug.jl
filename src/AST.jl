@@ -9,7 +9,7 @@ import Base.has, Base.show
 
 export Env, LocalEnv, NoEnv, child, add_assigned, add_defined
 export Trap, Loc, Leaf, Sym, Block
-export get_head
+export headof, argsof, argof, nargsof, envof, exof
 
 
 # ---- Env: analysis-time scope -----------------------------------------------
@@ -46,7 +46,18 @@ type Leaf{T};         ex::T;                           end # Unexpanded node
 type Loc{T} <: Trap;  ex::T; line::Int; file::String;  end # Trap location
 Loc{T}(ex::T, line, file) = Loc{T}(ex, line, string(file))
 Loc{T}(ex::T, line)       = Loc{T}(ex, line, "")
-get_head(ex::Block) = :block
-get_head(ex::Expr)  = ex.head
+
+
+headof(ex::Block) = :block
+headof(ex::Expr) = ex.head
+
+argsof(ex::Union(Expr,Block)) = ex.args
+nargsof(ex)  = length(argsof(ex))
+argof(ex, k) = argsof(ex)[k]
+
+envof(ex::Union(Block,Sym)) = ex.env
+
+exof(ex::Union(Leaf,Loc,Sym))    = ex.ex
+
 
 end # module
