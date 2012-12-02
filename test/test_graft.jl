@@ -14,36 +14,19 @@ macro assert_fails(ex)
     end
 end
 
-macro graft(args...)
-    error("Should never be invoked directly!")
+type Graft <: Trap;  ex;  end
+
+macro graft(ex)
+    Leaf(Graft(ex))
 end
 
-# todo: instead of cutting grafts, use a dedicated graft trap
+trap(::Any, ::Scope) = nothing
+trap(g::Graft, scope::Scope) = debug_eval(scope, g.ex)
+
 macro test_graft(ex)
-    stem, grafts = cut_grafts(ex)
-    grafts = tuple(grafts...)  # make grafts work as just a value
-    trap = (loc, scope)->debug_eval(scope, grafts[loc.line])
-    esc(instrument(quot(trap), stem))
+    esc(instrument(quot(trap), ex))
 end
 
-cut_grafts(ex) = (grafts = {}; (cut_grafts!(grafts, ex), grafts))
-
-cut_grafts!(grafts::Vector, ex) = ex
-function cut_grafts!(grafts::Vector, ex::Ex)
-    code = {}
-    for arg in argsof(ex)
-        if Debug.Analysis.is_linenumber(arg)
-            # omit the original line numbers
-        elseif is_expr(arg, :macrocall) && argof(arg,1) == symbol("@graft")
-            @assert nargsof(arg) == 2                
-            push(grafts, argof(arg, 2))
-            push(code, expr(:line, length(grafts)))
-        else
-            push(code, cut_grafts!(grafts, arg))
-        end
-    end
-    expr(headof(ex), code)
-end
 
 type T
     x
