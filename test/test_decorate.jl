@@ -1,7 +1,7 @@
 include(find_in_path("Debug.jl"))
 
 module TestDecorate
-export @syms
+export @syms, @noenv
 using Base, Debug.AST, Debug.Meta, Debug.Analysis
 
 macro assert_fails(ex)
@@ -28,6 +28,9 @@ macro syms(args...)
         Leaf(BlockEnv(args, []))
     end
 end
+macro noenv()
+    Leaf(NoEnv())
+end
 
 rebuild(node::Leaf) = exof(node)
 rebuild(node::Union(Leaf{BlockEnv},Leaf{NoEnv})) = node
@@ -52,9 +55,10 @@ function rebuild(block::BlockNode)
 end
 
 function test_decorate(code)
-    dcode = analyze(NoEnv(), code, false)
+    ecode = macroexpand(code)
+    dcode = analyze(NoEnv(), ecode, false)
     rcode = rebuild(dcode)
-    @assert rcode == code
+    @assert rcode == ecode
 end
 macro test_decorate(ex)
     quote
@@ -62,14 +66,13 @@ macro test_decorate(ex)
     end
 end
 
-# todo: replace $(@syms [f]) with @syms [f]  etc.
 @test_decorate let
-    $(@syms [f])
+    @syms [f]
     function f(x::Int)
-        $(@syms x [y])
+        @syms x [y]
         y = 0
         while x > 0
-            $(@syms)
+            @syms
             x -= y
             y += 1
         end
@@ -78,27 +81,35 @@ end
 end
 
 @assert_fails @test_decorate let
-    $(@syms)
+    @syms
     local x = 3
 end
 @assert_fails @test_decorate let
-    $(@syms)
+    @syms
     x = 3
 end
 @assert_fails @test_decorate let
-    $(@syms x)
+    @syms x
 end
 @assert_fails @test_decorate let
-    $(@syms [x])
+    @syms [x]
 end
+
+@assert_fails @test_decorate let
+    @noenv
+end
+@assert_fails @test_decorate begin
+    @syms
+end
+
 
 # ---- scoping tests ----------------------------------------------------------
 
 # symbol defining/assigning constructs
 @test_decorate let
-    $(@syms)
+    @syms
     let
-        $(@syms d1 d2 d3 d4 d5 [a1 a2 a3 a4])
+        @syms d1 d2 d3 d4 d5 [a1 a2 a3 a4]
         # define
         global d1, d2=3, d3::Int, d4::String = "foo"
         local d5::Float64 = 3    
@@ -115,10 +126,10 @@ end
 
 # while
 @test_decorate let
-    $(@syms [i])
+    @syms [i]
     i=1
-    while ($(@syms [i]); i < 3) # condition evaluated in outside scope
-        $(@syms j [i z])
+    while (@syms [i]; i < 3) # condition evaluated in outside scope
+        @syms j [i z]
         i=i+1
         local j=i^2
         z = i-j
@@ -128,19 +139,19 @@ end
 # try
 @test_decorate let
     try
-        $(@syms x)    
+        @syms x
         local x
     catch e
-        $(@syms e [y])
+        @syms e [y]
         y = 2
     end
 end
 
 # for
 @test_decorate let
-    $(@syms [a])
+    @syms [a]
     for x=(a=11; 1:n)
-        $(@syms x [x2])
+        @syms x [x2]
         x2 = x^2
         push(z, x2)       
     end
@@ -148,74 +159,74 @@ end
 
 # let
 @test_decorate let
-    $(@syms [a])
+    @syms [a]
     let x, y=3, z::Int, u::Int=11, v=(a=11; 23)
-        $(@syms x y z u v)
+        @syms x y z u v
     end
 end
 
 # comprehensions
 @test_decorate let
     let
-        $(@syms [a])
-        [($(@syms x y); x*y+z) for x=($(@syms [a]); 1:5), y=(a=5; 1:3)]
+        @syms [a]
+        [(@syms x y; x*y+z) for x=(@syms [a]; 1:5), y=(a=5; 1:3)]
     end
     let
-        $(@syms [a])
-        {($(@syms x y); x*y+z) for x=($(@syms [a]); 1:5), y=(a=5; 1:3)}
+        @syms [a]
+        {(@syms x y; x*y+z) for x=(@syms [a]; 1:5), y=(a=5; 1:3)}
     end
     let
-        $(@syms [a b])
-        (b=5;Int)[($(@syms x); x+z) for x=($(@syms [a b]); a=5; 1:5)]
+        @syms [a b]
+        (b=5;Int)[(@syms x; x+z) for x=(@syms [a b]; a=5; 1:5)]
     end
 end
 
 # dict comprehensions
 @test_decorate let
     let
-        $(@syms [a])
-        [($(@syms x y); x*y=>z) for x=($(@syms [a]); 1:5), y=(a=5; 1:3)]
+        @syms [a]
+        [(@syms x y; x*y=>z) for x=(@syms [a]; 1:5), y=(a=5; 1:3)]
     end
     let
-        $(@syms [a])
-        {($(@syms x y); x*y=>z) for x=($(@syms [a]); 1:5), y=(a=5; 1:3)}
+        @syms [a]
+        {(@syms x y; x*y=>z) for x=(@syms [a]; 1:5), y=(a=5; 1:3)}
     end
     let
-        $(@syms [a b])
-        (b=5;Int=>Int)[($(@syms x); x=>z) for x=($(@syms [a b]); a=5; 1:5)]
+        @syms [a b]
+        (b=5;Int=>Int)[(@syms x; x=>z) for x=(@syms [a b]; a=5; 1:5)]
     end
 end
 
 # functions
 @test_decorate let
-    $(@syms [f1 f2 f3 f4])
+    @syms [f1 f2 f3 f4]
     function f1(x, y::(w=3; Int), args...)
-        $(@syms x y args [z w])
+        @syms x y args [z w]
         z = x*y
     end
     f2(x, y::(w=3; Int), args::Int...) = begin
-        $(@syms x y args [z w])
+        @syms x y args [z w]
         z = x*y
     end
     f3 = function(x, y::(w=3; Int), args...)
-        $(@syms x y args [z w])
+        @syms x y args [z w]
         z = x*y
     end
     f4 = (x, y::(w=3; Int), args...)->begin
-        $(@syms x y args [z w])
+        @syms x y args [z w]
         z = x*y
     end
 end
 
 # functions with type parameters
 @test_decorate let
-    $(@syms [f g])
+    @syms [f g]
     function f{S,T<:Int}(x::S, y::T)
-        $(@syms S T x y)
+        @syms S T x y
         (x, y)
     end
     g{S,T<:Int}(x::S, y::T) = begin
-        $(@syms S T x y)
+        @syms S T x y
         (x, y)
     end
 end
@@ -228,7 +239,7 @@ end
 
 # typealias, abstract
 @test_decorate let
-    $(@syms T1 T2 T3)
+    @syms T1 T2 T3
     abstract T1
     abstract T2 <: Q
     typealias T3 T1    
@@ -236,17 +247,17 @@ end
 
 # type
 @test_decorate let
-    $(@syms T [a])
+    @syms T [a]
     type T<:(a=3; Integer)
-        $(@syms c T)
+        @syms c T
         x::Int
         y::Int
         c(x,y) = begin
-            $(@syms x y)
+            @syms x y
             new(x,y)
         end
         function T(x)
-            $(@syms x)
+            @syms x
             c(x,2x)
         end
     end
@@ -254,36 +265,35 @@ end
 
 # types with type parameters
 @test_decorate let
-    $(@syms P Q)
+    @syms P Q
     type P{T}
-        $(@syms T)
+        @syms T
         x::T
     end
     type Q{S,T} <: Associative{S,T}
-        $(@syms S T)
+        @syms S T
         x::T
     end
 end
 
 # abstract/typealias with type parameters
 @test_decorate let
-    $(@syms A X)
-    abstract A{S,T} <: B{($(@syms A X); Int)}
-    typealias X{Q<:Associative{Int,Int},R<:Real} Dict{($(@syms Q R); Int),Int}
+    @syms A X
+    abstract A{S,T} <: B{(@syms A X; Int)}
+    typealias X{Q<:Associative{Int,Int},R<:Real} Dict{(@syms Q R; Int),Int}
 end
 
 # global/local scope
-const noenv = Leaf(NoEnv())
 @test_decorate begin
-    $(noenv)
+    @noenv
     begin
-        $(noenv)        
+        @noenv        
     end
-    for x=($(noenv); 1:3)
-        $(@syms x)
+    for x=(@noenv; 1:3)
+        @syms x
     end
-    let y=($(noenv); 1)
-        $(@syms y)
+    let y=(@noenv; 1)
+        @syms y
     end
 end
 
