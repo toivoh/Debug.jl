@@ -18,6 +18,7 @@ macro graft(args...)
     error("Should never be invoked directly!")
 end
 
+# todo: instead of cutting grafts, use a dedicated graft trap
 macro test_graft(ex)
     stem, grafts = cut_grafts(ex)
     grafts = tuple(grafts...)  # make grafts work as just a value

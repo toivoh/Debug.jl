@@ -21,30 +21,30 @@ end
 
 macro syms(args...)
     if length(args) == 0
-        BlockEnv([],[])
+        Leaf(BlockEnv([],[]))
     elseif is_expr(args[end], :hcat) || is_expr(args[end], :vcat)
-        BlockEnv(args[1:end-1], args[end].args)
+        Leaf(BlockEnv(args[1:end-1], args[end].args))
     else
-        BlockEnv(args, [])
+        Leaf(BlockEnv(args, []))
     end
 end
 
 rebuild(node::Leaf) = exof(node)
+rebuild(node::Union(Leaf{BlockEnv},Leaf{NoEnv})) = node
 rebuild(ex::Ex) = expr(headof(ex), {rebuild(arg) for arg in argsof(ex)})
 function rebuild(block::BlockNode)
     env = envof(block)
     for arg in argsof(block)
-        if !isa(arg, PLeaf);  continue  end
-        ex = exof(arg)
-        if isa(ex, BlockEnv)
-            if !(env.defined == ex.defined)
-                error("env.defined = $(env.defined) != $(ex.defined)")
+        if isa(arg, Leaf{BlockEnv})
+            benv = arg.format
+            if !(env.defined == benv.defined)
+                error("env.defined = $(env.defined) != $(benv.defined)")
             end
             just_assigned = env.assigned - env.defined
-            if !(just_assigned == ex.assigned)
-                error("just_assigned = $(just_assigned) != $(exof(arg).assigned)")
+            if !(just_assigned == benv.assigned)
+                error("just_assigned = $(just_assigned) != $(benv.assigned)")
             end
-        elseif isa(ex, NoEnv)
+        elseif isa(arg, Leaf{NoEnv})
             @assert isa(env, NoEnv)
         end
     end
@@ -62,6 +62,7 @@ macro test_decorate(ex)
     end
 end
 
+# todo: replace $(@syms [f]) with @syms [f]  etc.
 @test_decorate let
     $(@syms [f])
     function f(x::Int)
@@ -74,6 +75,21 @@ end
         end
         y
     end
+end
+
+@assert_fails @test_decorate let
+    $(@syms)
+    local x = 3
+end
+@assert_fails @test_decorate let
+    $(@syms)
+    x = 3
+end
+@assert_fails @test_decorate let
+    $(@syms x)
+end
+@assert_fails @test_decorate let
+    $(@syms [x])
 end
 
 # ---- scoping tests ----------------------------------------------------------
@@ -257,7 +273,7 @@ end
 end
 
 # global/local scope
-const noenv = NoEnv()
+const noenv = Leaf(NoEnv())
 @test_decorate begin
     $(noenv)
     begin
