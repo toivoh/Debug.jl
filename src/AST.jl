@@ -9,7 +9,7 @@ import Base.has, Base.show
 
 export Env, LocalEnv, NoEnv, child, add_assigned, add_defined
 export LocNode, PLeaf, SymNode, BlockNode
-export Loc
+export Loc, Block
 export headof, argsof, argof, nargsof, envof, exof
 export Ex, Node, ExNode, Leaf
 export is_trap

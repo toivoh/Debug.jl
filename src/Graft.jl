@@ -65,7 +65,7 @@ function instrument(trap_ex, ex)
 end
 
 instrument(c::Context, ex) = ex # todo: remove?
-instrument(c::Context, node::Union(PLeaf,SymNode)) = exof(node)
+instrument(c::Context, node::Leaf) = exof(node)
 function instrument(c::Context, ex::Ex)
     expr(headof(ex), {instrument(c, arg) for arg in argsof(ex)})
 end
@@ -89,6 +89,7 @@ function instrument(c::Context, ex::BlockNode)
     end
     
     for arg in argsof(ex)
+        # todo: introduce is_emittable
         if is_trap(arg)
             if isa(arg, LocNode);  push(code, exof(arg))  end
             push(code, :($(c.trap_ex)($(quot(arg.format)), $(c.scope_ex))) )
@@ -112,8 +113,8 @@ const updating_ops = {
  :%= => :%,   :|= => :|,  :&= => :&,  :$= => :$,  :<<= => :<<,  :>>= => :>>,
  :>>>= => :>>>}
 
-graft(s::LocalScope, ex)                    = ex
-graft(s::LocalScope, node::Union(PLeaf,LocNode)) = exof(node)
+graft(s::LocalScope, ex)         = ex
+graft(s::LocalScope, node::Leaf) = exof(node)
 function graft(s::LocalScope, ex::SymNode)
     sym = exof(ex)
     (has(s,sym) && !has(envof(ex),sym)) ? expr(:call,quot(getter(s,sym))) : sym

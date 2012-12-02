@@ -10,7 +10,7 @@ export instrument, debug_eval, Scope
 # tie together Analysis and Graft
 instrument(trap_ex, ex) = Graft.instrument(trap_ex,    analyze(     ex, true))
 graft(env::Env, scope::Scope, ex) = Graft.graft(scope, analyze(env, ex, false))
-graft(scope::Scope, ex) = graft(child(NoEnv()), scope, ex)
+graft(scope::Scope, ex) =                 graft(child(NoEnv()), scope, ex)
 
 debug_eval(scope::NoScope, ex) = eval(ex)
 function debug_eval(scope::LocalScope, ex)
