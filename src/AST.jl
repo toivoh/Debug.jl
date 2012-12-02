@@ -41,15 +41,6 @@ add_assigned(env::LocalEnv, sym::Symbol) = add(env.assigned, sym)
 
 
 # ---- Extended AST nodes that can be produced by decorate() ------------------
-abstract Trap  # nodes that should invoke trap(node, scope)
-
-#type BlockNode;       args::Vector; env::Env;          end # :block with Env
-# type SymNode;         ex::Symbol;   env::Env;          end # Symbol with Env
-# type PLeaf{T};        ex::T;                           end # Unexpanded node
-# type LocNode{T} <: Trap;  ex::T; line::Int; file::String;  end # Trap location
-# LocNode{T}(ex::T, line, file) = LocNode{T}(ex, line, string(file))
-# LocNode{T}(ex::T, line)       = LocNode{T}(ex, line, "")
-
 
 abstract Node
 
@@ -59,14 +50,10 @@ type ExNode{T} <: Node
     args::Vector{Node}
 
     ExNode(format::T, args) = new(nothing, format, Node[args...])
-#     args::Vector
-
-#     ExNode(format::T, args) = new(nothing, format, {args...})
     ExNode(args...) = ExNode(T(args[1:end-1]...), args[end])
 end
 ExNode{T}(format::T, args) = ExNode{T}(format, args)
 
-#typealias Ex Union(Expr, ExNode, BlockNode)
 typealias Ex Union(Expr, ExNode)
 
 type Block;  env::Env;  end
@@ -101,12 +88,9 @@ argsof(ex::Ex) = ex.args
 nargsof(ex)  = length(argsof(ex))
 argof(ex, k) = argsof(ex)[k]
 
-#envof(ex::Union(BlockNode,SymNode)) = ex.env ##
-#envof(ex::SymNode) = ex.env ##
 envof(node::Union(ExNode, Leaf)) = envof(node.format)
 envof(fmt::Union(Block, Sym))    = fmt.env
 
-#exof(ex::Union(PLeaf,LocNode,SymNode))  = ex.ex ##
 exof(node::Leaf) = exof(node.format)
 exof(fmt::Union(Plain, Sym, Loc)) = fmt.ex
 
