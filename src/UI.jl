@@ -6,7 +6,7 @@
 module UI
 using Base, Meta, AST, Eval
 import AST.is_trap
-export trap, @bp
+export trap, @bp, BreakPoint
 
 type BreakPoint <: Trap; end
 is_trap(::BreakPoint) = true

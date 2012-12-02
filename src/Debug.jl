@@ -1,7 +1,7 @@
 
 module Debug
 using Base
-export @debug, @bp, debug_eval, Loc, Scope
+export @debug, @bp, debug_eval, Scope, Loc, BreakPoint
 
 include(find_in_path("Debug/src/AST.jl"))
 include(find_in_path("Debug/src/Meta.jl"))

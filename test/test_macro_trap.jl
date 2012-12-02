@@ -3,16 +3,15 @@ include(find_in_path("Debug.jl"))
 module TestMacroTrap
 using Base, Debug
 
-function trap(loc::Loc, scope::Scope)
-    if loc.line == 15
-        @assert scope[:z] == 3
-        scope[:z] = 4
-    end
+trap(::Loc, ::Scope) = nothing
+function trap(::BreakPoint, scope::Scope)
+    @assert scope[:z] == 3
+    scope[:z] = 4
 end
 
 macro m()
     esc(quote
-        z  # must be line 15!
+        @bp
     end)
 end
 
