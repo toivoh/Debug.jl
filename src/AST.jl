@@ -56,12 +56,12 @@ abstract Node
 type ExNode{T} <: Node
     parent::Union(ExNode, Nothing)
     format::T
-#     args::Vector{Node}
+    args::Vector{Node}
 
-#     ExNode(format::T, args) = new(nothing, format, Node[args...])
-    args::Vector
+    ExNode(format::T, args) = new(nothing, format, Node[args...])
+#     args::Vector
 
-    ExNode(format::T, args) = new(nothing, format, {args...})
+#     ExNode(format::T, args) = new(nothing, format, {args...})
     ExNode(args...) = ExNode(T(args[1:end-1]...), args[end])
 end
 ExNode{T}(format::T, args) = ExNode{T}(format, args)
