@@ -9,7 +9,7 @@ import Base.has, Base.show
 
 export Env, LocalEnv, NoEnv, child, add_assigned, add_defined
 export LocNode, PLeaf, SymNode, BlockNode
-export Loc, Block
+export Trap, Loc, Block
 export headof, argsof, argof, nargsof, envof, exof
 export Ex, Node, ExNode, Leaf
 export is_trap
@@ -68,9 +68,11 @@ type Leaf{T} <: Node
 end
 Leaf{T}(format::T) = Leaf{T}(format)
 
-type Plain;  ex; end
-type Sym;    ex::Symbol; env::Env;  end
-type Loc{T}  ex::T; line::Int; file::String;  end
+abstract Trap
+
+type Plain;           ex; end
+type Sym;             ex::Symbol; env::Env;  end
+type Loc{T} <: Trap;  ex::T; line::Int; file::String;  end
 Loc{T}(ex::T, line, file) = Loc{T}(ex, line, string(file))
 Loc{T}(ex::T, line)       = Loc{T}(ex, line, "")
 
@@ -94,7 +96,7 @@ envof(fmt::Union(Block, Sym))    = fmt.env
 exof(node::Leaf) = exof(node.format)
 exof(fmt::Union(Plain, Sym, Loc)) = fmt.ex
 
-is_trap(ex)        = false
-is_trap(::LocNode) = true
+is_trap(ex)                 = false
+is_trap{T<:Trap}(::Leaf{T}) = true
 
 end # module

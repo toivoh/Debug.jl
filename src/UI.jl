@@ -8,16 +8,16 @@ using Base, Meta, AST, Eval
 import AST.is_trap
 export trap, @bp
 
-type BreakPoint; end
+type BreakPoint <: Trap; end
 is_trap(::BreakPoint) = true
 
 macro bp()
-    BreakPoint()
+    Leaf(BreakPoint())
 end
 
 dostep = false
 trap(::BreakPoint, scope::Scope) = (global dostep = true)
-function trap(loc::LocNode, scope::Scope)
+function trap(loc::Loc, scope::Scope)
     global dostep
     if !dostep; return; end
     print("\nat ", loc.file, ":", loc.line)
