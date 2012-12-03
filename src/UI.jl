@@ -18,7 +18,8 @@ macro bp()
 end
 
 dostep = false
-trap(::BPNode, scope::Scope) = (global dostep = true)
+trap(::BPNode,    scope::Scope) = (global dostep = true)
+trap(::BlockNode, scope::Scope) = nothing
 function trap(node::Node, scope::Scope)
     global dostep
     if !dostep; return; end

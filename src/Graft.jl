@@ -62,6 +62,7 @@ end
 
 is_trap(::LocNode)          = false
 is_trap{T<:Trap}(::Leaf{T}) = true
+is_trap(node::BlockNode)    = false  # trapped separately
 is_trap(node::Node)         = !(node.loc.ex === nothing)
 is_trap(ex)                 = false
 
@@ -76,15 +77,15 @@ function instrument(c::Context, ex::Ex)
     expr(headof(ex), {instrument(c, arg) for arg in argsof(ex)})
 end
 function instrument(c::Context, ex::BlockNode)
-    code = {}
-
     if isa(envof(ex), LocalEnv) && is_expr(envof(ex).source, :type)
+        code = {}
         for arg in argsof(ex)        
             if is_emittable(arg);  push(code, instrument(c, arg));  end
         end
         return expr(:block, code)
     end
 
+    code = {}
     if !is(envof(ex), c.env)
         syms, e = Set{Symbol}(), envof(ex)
         while !is(e, c.env);  add_each(syms, e.defined); e = e.parent;  end
@@ -93,7 +94,8 @@ function instrument(c::Context, ex::BlockNode)
         push(code, code_scope(name, c.scope_ex, envof(ex), syms))
         c = Context(c.trap_ex, envof(ex), name)
     end
-    
+
+    push(code, :($(c.trap_ex)($(quot(ex)), $(c.scope_ex))) )    
     for arg in argsof(ex)
         if is_trap(arg) || !(arg.loc.ex === nothing || isa(arg, LocNode))
             push(code, :($(c.trap_ex)($(quot(arg)), $(c.scope_ex))) )

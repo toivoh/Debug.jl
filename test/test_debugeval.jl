@@ -4,6 +4,7 @@ module TestDebugEval
 using Base, Debug
 
 firstline = -1
+trap(node::BlockNode, scope::Scope) = nothing
 function trap(node::Node, scope::Scope) 
     global firstline = (firstline == -1) ? node.loc.line : firstline
     line = node.loc.line - firstline + 1
