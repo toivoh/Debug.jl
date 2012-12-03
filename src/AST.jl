@@ -49,7 +49,11 @@ type ExNode{T} <: Node
     format::T
     args::Vector{Node}
 
-    ExNode(format::T, args) = new(nothing, format, Node[args...])
+    function ExNode(format::T, args)
+        ex = new(nothing, format, Node[args...])
+        for arg in ex.args; set_parent(arg, ex); end
+        ex
+    end
     ExNode(args...) = ExNode(T(args[1:end-1]...), args[end])
 end
 ExNode{T}(format::T, args) = ExNode{T}(format, args)
@@ -91,8 +95,12 @@ function show(io::IO, ex::PLeaf)
     print(io,"PLeaf("); show(io,ex.format.ex); print(io,")")
 end
 
-
-parentof(ex::Node) = ex.parent
+function set_parent(ex::Union(ExNode, Leaf), parent::Node)
+    if parentof(ex) === nothing; ex.parent = parent
+    else; error("$ex already has a parent!")
+    end
+end
+parentof(ex::Union(ExNode, Leaf)) = ex.parent
 
 headof(ex::Expr)           = ex.head
 headof(ex::ExNode{Symbol}) = ex.format
