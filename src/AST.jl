@@ -10,7 +10,7 @@ import Base.has, Base.show
 export Env, LocalEnv, NoEnv, child, add_assigned, add_defined
 export LocNode, PLeaf, SymNode, BlockNode
 export Trap, Loc, Block
-export headof, argsof, argof, nargsof, envof, exof
+export headof, argsof, argof, nargsof, envof, exof, valueof
 export Ex, Node, ExNode, Leaf
 export is_trap, is_emittable
 
@@ -121,6 +121,8 @@ envof(fmt::Union(Block, Sym))    = fmt.env
 
 exof(node::Leaf) = exof(node.format)
 exof(fmt::Union(Plain, Sym, Loc)) = fmt.ex
+
+valueof(node::Leaf) = node.format
 
 is_trap(ex)                 = false
 is_trap{T<:Trap}(::Leaf{T}) = true

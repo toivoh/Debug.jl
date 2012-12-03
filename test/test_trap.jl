@@ -4,9 +4,9 @@ module TestTrap
 using Base, Debug
 
 firstline = -1
-function trap(loc::Loc, scope::Scope)
-    global firstline = (firstline == -1) ? loc.line : firstline
-    line = loc.line - firstline + 1
+function trap(node::Node, scope::Scope)
+    global firstline = (firstline == -1) ? node.loc.line : firstline
+    line = node.loc.line - firstline + 1
 
     print(line, ":")
     if (line >  1); print("\tx = ", scope[:x]) end

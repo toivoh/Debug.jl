@@ -22,7 +22,7 @@ macro graft(ex)
 end
 
 trap(::Any, ::Scope) = nothing
-trap(g::Graft, scope::Scope) = debug_eval(scope, g.ex)
+trap(g::Leaf{Graft}, scope::Scope) = debug_eval(scope, valueof(g).ex)
 
 macro test_graft(ex)
     esc(instrument(quot(trap), ex))

@@ -6,23 +6,25 @@
 module UI
 using Base, Meta, AST, Eval
 import AST.is_emittable
-export trap, @bp, BreakPoint
+export trap, @bp, BPNode
 
 type BreakPoint <: Trap; end
-is_emittable(::Leaf{BreakPoint}) = false
+typealias BPNode Leaf{BreakPoint}
+is_emittable(::BPNode) = false
+
 
 macro bp()
     Leaf(BreakPoint())
 end
 
 dostep = false
-trap(::BreakPoint, scope::Scope) = (global dostep = true)
-function trap(loc::Loc, scope::Scope)
+trap(::BPNode, scope::Scope) = (global dostep = true)
+function trap(node::Node, scope::Scope)
     global dostep
     if !dostep; return; end
-    print("\nat ", loc.file, ":", loc.line)
+    print("\nat ", node.loc.file, ":", node.loc.line)
     while true
-        print("\ndebug:$(loc.line)> "); flush(OUTPUT_STREAM)
+        print("\ndebug:$(node.loc.line)> "); flush(OUTPUT_STREAM)
         cmd = readline(stdin_stream)[1:end-1]
         if cmd == "s";     break
         elseif cmd == "c"; dostep = false; break
