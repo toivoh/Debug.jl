@@ -42,15 +42,26 @@ add_assigned(env::LocalEnv, sym::Symbol) = add(env.assigned, sym)
 
 # ---- Extended AST nodes that can be produced by decorate() ------------------
 
+abstract Trap
+
+type Plain;           ex; end
+type Sym;             ex::Symbol; env::Env;  end
+type Loc{T} <: Trap;  ex::T; line::Int; file::String;  end
+Loc{T}(ex::T, line, file) = Loc{T}(ex, line, string(file))
+Loc{T}(ex::T, line)       = Loc{T}(ex, line, "")
+
+
 abstract Node
 
 type ExNode{T} <: Node
-    parent::Union(ExNode, Nothing)
     format::T
     args::Vector{Node}
 
+    parent::Union(ExNode, Nothing)
+    loc::Loc
+
     function ExNode(format::T, args)
-        ex = new(nothing, format, Node[args...])
+        ex = new(format, Node[args...], nothing)
         for arg in ex.args; set_parent(arg, ex); end
         ex
     end
@@ -69,22 +80,16 @@ type Block;  env::Env;  end
 typealias BlockNode ExNode{Block}
 
 type Leaf{T} <: Node
-    parent::Union(ExNode, Nothing)
     format::T
 
-    Leaf(format::T) = new(nothing, format)
-    Leaf(args...)   = new(nothing, T(args...))
+    Leaf(format::T) = new(format, nothing)
+    Leaf(args...)   = new(T(args...), nothing)
+
+    parent::Union(ExNode, Nothing)
+    loc::Loc
 end
 Leaf{T}(format::T) = Leaf{T}(format)
 
-
-abstract Trap
-
-type Plain;           ex; end
-type Sym;             ex::Symbol; env::Env;  end
-type Loc{T} <: Trap;  ex::T; line::Int; file::String;  end
-Loc{T}(ex::T, line, file) = Loc{T}(ex, line, string(file))
-Loc{T}(ex::T, line)       = Loc{T}(ex, line, "")
 
 typealias PLeaf   Leaf{Plain}
 typealias SymNode Leaf{Sym}
@@ -94,6 +99,7 @@ show(io::IO, ex::Leaf) = (print(io,"Leaf("); show(io,ex.format); print(io,")"))
 function show(io::IO, ex::PLeaf) 
     print(io,"PLeaf("); show(io,ex.format.ex); print(io,")")
 end
+
 
 function set_parent(ex::Union(ExNode, Leaf), parent::Node)
     if parentof(ex) === nothing; ex.parent = parent
