@@ -143,14 +143,21 @@ end
 # ---- post-decoration processing ---------------------------------------------
 
 ## set_source!(): propagate source file info ##
-set_source!(ex,              file::String) = nothing
-set_source!(ex::LocNode,     file::String) = (ex.format.file = file)
-function set_source!(ex::Ex, file::String)
+function set_source!(ex::LocNode, locex, line, file)
+    ex.format.file = file
+    ex.loc = ex.format
+end
+set_source!(ex::Leaf, locex, line, file) = (ex.loc = Loc(locex, line, file))
+function set_source!(ex::ExNode, locex, line, file)
+    ex.loc = Loc(locex, line, file)
+    locex  = nothing
     for arg in argsof(ex)
-        if isa(arg, LocNode) && arg.format.file != ""
-            file = arg.format.file
+        if isa(arg, LocNode) 
+            line = arg.format.line
+            if arg.format.file != "";  file = arg.format.file;  end
         end
-        set_source!(arg, file)
+        set_source!(arg, locex, line, file)
+        locex = isa(arg, LocNode) ? exof(arg) : nothing
     end
 end
 
@@ -182,7 +189,7 @@ analyze(ex, process_envs::Bool) = analyze(Rhs(NoEnv()), ex, process_envs)
 analyze(env::Env, ex, process_envs::Bool) = analyze(Rhs(env), ex, process_envs)
 function analyze(s::State, ex, process_envs::Bool)
     node = decorate(s, ex)
-    set_source!(node, "")
+    set_source!(node, nothing, -1, "")
     if process_envs; postprocess_env!(Set{LocalEnv}(), node); end
     node
 end
