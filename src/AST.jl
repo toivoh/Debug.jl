@@ -12,7 +12,7 @@ export LocNode, PLeaf, SymNode, BlockNode
 export Trap, Loc, Block
 export headof, argsof, argof, nargsof, envof, exof, valueof
 export Ex, Node, ExNode, Leaf
-export is_trap, is_emittable
+export is_emittable
 
 
 # ---- Env: analysis-time scope -----------------------------------------------
@@ -123,9 +123,6 @@ exof(node::Leaf) = exof(node.format)
 exof(fmt::Union(Plain, Sym, Loc)) = fmt.ex
 
 valueof(node::Leaf) = node.format
-
-is_trap(ex)                 = false
-is_trap{T<:Trap}(::Leaf{T}) = true
 
 is_emittable(ex) = true
 

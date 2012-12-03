@@ -60,6 +60,12 @@ function code_scope(scopesym::Symbol, parent, env::Env, syms)
     ))
 end
 
+is_trap(::LocNode)          = false
+is_trap{T<:Trap}(::Leaf{T}) = true
+is_trap(node::Node)         = !(node.loc.ex === nothing)
+is_trap(ex)                 = false
+
+
 function instrument(trap_ex, ex)
     instrument(Context(trap_ex, NoEnv(), quot(NoScope())), ex)
 end
@@ -74,7 +80,7 @@ function instrument(c::Context, ex::BlockNode)
 
     if isa(envof(ex), LocalEnv) && is_expr(envof(ex).source, :type)
         for arg in argsof(ex)        
-            if !is_trap(arg);  push(code, instrument(c, arg));  end
+            if is_emittable(arg);  push(code, instrument(c, arg));  end
         end
         return expr(:block, code)
     end
