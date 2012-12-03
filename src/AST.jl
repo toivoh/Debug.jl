@@ -53,6 +53,11 @@ type ExNode{T} <: Node
     ExNode(args...) = ExNode(T(args[1:end-1]...), args[end])
 end
 ExNode{T}(format::T, args) = ExNode{T}(format, args)
+function show(io::IO, ex::ExNode) 
+    print(io, "ExNode("); 
+    show(io, ex.format); print(io, ", ")
+    show(io, ex.args);   print(io, ")")
+end
 
 typealias Ex Union(Expr, ExNode)
 
@@ -68,6 +73,7 @@ type Leaf{T} <: Node
 end
 Leaf{T}(format::T) = Leaf{T}(format)
 
+
 abstract Trap
 
 type Plain;           ex; end
@@ -79,6 +85,12 @@ Loc{T}(ex::T, line)       = Loc{T}(ex, line, "")
 typealias PLeaf   Leaf{Plain}
 typealias SymNode Leaf{Sym}
 typealias LocNode Leaf{Loc}
+
+show(io::IO, ex::Leaf) = (print(io,"Leaf("); show(io,ex.format); print(io,")"))
+function show(io::IO, ex::PLeaf) 
+    print(io,"PLeaf("); show(io,ex.format.ex); print(io,")")
+end
+
 
 parentof(ex::Node) = ex.parent
 
