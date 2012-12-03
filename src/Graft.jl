@@ -89,11 +89,13 @@ function instrument(c::Context, ex::BlockNode)
     end
     
     for arg in argsof(ex)
-        # todo: introduce is_emittable
         if is_trap(arg)
-            if isa(arg, LocNode);  push(code, exof(arg))  end
             push(code, :($(c.trap_ex)($(quot(arg.format)), $(c.scope_ex))) )
-        else
+        elseif !(arg.loc.ex === nothing) && !isa(arg, LocNode)
+            push(code, :($(c.trap_ex)($(quot(arg.loc)), $(c.scope_ex))) )
+        end           
+
+        if is_emittable(arg)
             push(code, instrument(c, arg))
         end
     end

@@ -12,7 +12,7 @@ export LocNode, PLeaf, SymNode, BlockNode
 export Trap, Loc, Block
 export headof, argsof, argof, nargsof, envof, exof
 export Ex, Node, ExNode, Leaf
-export is_trap
+export is_trap, is_emittable
 
 
 # ---- Env: analysis-time scope -----------------------------------------------
@@ -44,9 +44,9 @@ add_assigned(env::LocalEnv, sym::Symbol) = add(env.assigned, sym)
 
 abstract Trap
 
-type Plain;           ex; end
-type Sym;             ex::Symbol; env::Env;  end
-type Loc{T} <: Trap;  ex::T; line::Int; file::String;  end
+type Plain;   ex; end
+type Sym;     ex::Symbol; env::Env;  end
+type Loc{T};  ex::T; line::Int; file::String;  end
 Loc{T}(ex::T, line, file) = Loc{T}(ex, line, string(file))
 Loc{T}(ex::T, line)       = Loc{T}(ex, line, "")
 
@@ -124,5 +124,7 @@ exof(fmt::Union(Plain, Sym, Loc)) = fmt.ex
 
 is_trap(ex)                 = false
 is_trap{T<:Trap}(::Leaf{T}) = true
+
+is_emittable(ex) = true
 
 end # module
