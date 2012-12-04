@@ -10,7 +10,8 @@ import Base.has, Base.show
 export Env, LocalEnv, NoEnv, child, add_assigned, add_defined
 export LocNode, PLeaf, SymNode, BlockNode
 export Trap, Loc, Block
-export headof, argsof, argof, nargsof, envof, exof, valueof
+export headof, argsof, argof, nargsof
+export parentof, envof, exof, valueof
 export Ex, Node, ExNode, Leaf
 export is_emittable
 
