@@ -15,7 +15,7 @@ macro m()
     end)
 end
 
-@debug trap let
+@instrument trap let
     z = 3
     @m
     @assert z == 4

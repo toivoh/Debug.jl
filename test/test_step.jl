@@ -28,7 +28,7 @@ const instructions = {
     (14, continue!),
 }
 
-@debug trap let
+@instrument trap let
     @bp         #  1
     let         #  2
         x = 1   #  3

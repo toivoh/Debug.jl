@@ -22,7 +22,7 @@ function trap(node::Node, scope::Scope)
     println()
 end
 
-@debug trap function f(n)
+@instrument trap function f(n)
     x = 0       # line 1
     for k=1:n   # line 2
         x += k  # line 3
