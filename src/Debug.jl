@@ -12,16 +12,24 @@ include(find_in_path("Debug/src/Flow.jl"))
 include(find_in_path("Debug/src/UI.jl"))
 using AST, Meta, Analysis, Graft, Eval, Flow, UI
 
+instrument(pred, trap_ex, ex) = Graft.instrument(pred, trap_ex, analyze(ex, true))
+
+is_trap(::Union(LocNode,BlockNode)) = false
+is_trap(node::Node)                 = isa(node.parent, BlockNode)
+
 macro debug(ex)
-    code_debug(quot(trap), ex)
+    code_debug(UI.instrument(ex))
 end
 macro instrument(trap_ex, ex)
-    code_debug(trap_ex, ex)
+    @gensym trap_var
+    code_debug(quote
+        const $trap_var = $trap_ex
+        $(instrument(is_trap, trap_var, ex))
+    end)
 end
 
-function code_debug(trap_ex, ex)
+function code_debug(ex)
     globalvar = esc(gensym("globalvar"))
-    @gensym trap
     quote
         $globalvar = false
         try
@@ -31,8 +39,7 @@ function code_debug(trap_ex, ex)
         if !$globalvar
             error("@debug: must be applied in global scope!")
         end
-        const $(esc(trap)) = $(esc(trap_ex))
-        $(esc(instrument(trap, ex)))
+        $(esc(ex))
     end
 end
 

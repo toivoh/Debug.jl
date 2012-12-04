@@ -4,11 +4,18 @@
 # Interactive debug trap
 
 module Flow
-using Base, Meta, AST, Graft, Eval
+using Base, Meta, AST, Analysis, Graft, Eval
 import AST.is_emittable, Base.isequal
 export @bp, BPNode, DBState
 export continue!, singlestep!, stepover!, stepout!
 
+is_trap(::LocNode)          = false
+is_trap{T<:Trap}(::Leaf{T}) = true
+is_trap(node::BlockNode)    = true
+is_trap(node::Node)         = !(node.loc.ex === nothing)
+is_trap(ex)                 = false
+
+instrument(trap_ex, ex) = Graft.instrument(is_trap, trap_ex, analyze(ex, true))
 
 type BreakPoint <: Trap; end
 typealias BPNode Leaf{BreakPoint}

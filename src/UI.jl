@@ -7,6 +7,8 @@ module UI
 using Base, Meta, AST, Eval, Flow
 export trap
 
+instrument(ex) = Flow.instrument(trap, ex)
+
 state = DBState()
 function trap(node::Node, scope::Scope)
     if !Flow.trap(state, node, scope); return; end

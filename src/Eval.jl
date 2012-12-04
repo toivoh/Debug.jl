@@ -5,10 +5,9 @@
 
 module Eval
 using Base, AST, Analysis, Graft
-export instrument, debug_eval, Scope
+export debug_eval, Scope
 
 # tie together Analysis and Graft
-instrument(trap_ex, ex) = Graft.instrument(trap_ex,    analyze(     ex, true))
 graft(env::Env, scope::Scope, ex) = Graft.graft(scope, analyze(env, ex, false))
 graft(scope::Scope, ex) =                 graft(child(NoEnv()), scope, ex)
 

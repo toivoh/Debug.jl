@@ -2,8 +2,8 @@ include(find_in_path("Debug.jl"))
 
 module TestGraft
 export @syms
-using Base, Debug.AST, Debug.Meta, Debug.Eval
-import Debug, Debug.instrument, Debug.AST.is_emittable
+using Base, Debug, Debug.AST, Debug.Meta, Debug.Eval
+import Debug.AST.is_emittable
 export cut_grafts, @test_graft
 
 macro assert_fails(ex)
@@ -17,15 +17,14 @@ end
 type Graft <: Trap;  ex;  end
 is_emittable(::Leaf{Graft}) = false
 
-macro graft(ex)
-    Leaf(Graft(ex))
-end
-
 trap(::Any, ::Scope) = nothing
 trap(g::Leaf{Graft}, scope::Scope) = debug_eval(scope, valueof(g).ex)
 
+macro graft(ex)
+    Leaf(Graft(ex))
+end
 macro test_graft(ex)
-    esc(instrument(quot(trap), ex))
+    :(@instrument trap $(esc(ex)))
 end
 
 

@@ -20,6 +20,9 @@ function trap(node::Node, scope::Scope)
     f(state)
 end
 
+macro test_step(ex)
+    Debug.code_debug(Flow.instrument(trap, ex))
+end
 
 const instructions = {
     (2, singlestep!), (3, singlestep!), (4, singlestep!),
@@ -28,7 +31,7 @@ const instructions = {
     (14, continue!),
 }
 
-@instrument trap let
+@test_step let
     @bp         #  1
     let         #  2
         x = 1   #  3

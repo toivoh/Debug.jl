@@ -40,10 +40,17 @@ assign(scope::LocalScope, x,  sym::Symbol) = setter(scope, sym)(x)
 # A call to trap() is added after every AST.LocNode (expr(:line) / LineNumberNode)
 
 type Context
+    pred::Function
     trap_ex
     env::Env
     scope_ex
 end
+Context(c::Context, env::Env, scp_ex) = Context(c.pred, c.trap_ex, env, scp_ex)
+
+function instrument(pred::Function, trap_ex, ex)
+    instrument(Context(pred, trap_ex, NoEnv(), quot(NoScope())), ex)
+end
+
 
 function code_getset(sym::Symbol)
     val = gensym(string(sym))
@@ -58,17 +65,6 @@ function code_scope(scopesym::Symbol, parent, env::Env, syms)
             pairs...)),
         $(quot(env))
     ))
-end
-
-is_trap(::LocNode)          = false
-is_trap{T<:Trap}(::Leaf{T}) = true
-is_trap(node::BlockNode)    = false  # trapped separately
-is_trap(node::Node)         = !(node.loc.ex === nothing)
-is_trap(ex)                 = false
-
-
-function instrument(trap_ex, ex)
-    instrument(Context(trap_ex, NoEnv(), quot(NoScope())), ex)
 end
 
 instrument(c::Context, ex) = ex # todo: remove?
@@ -92,12 +88,14 @@ function instrument(c::Context, ex::BlockNode)
 
         name = gensym("scope")
         push(code, code_scope(name, c.scope_ex, envof(ex), syms))
-        c = Context(c.trap_ex, envof(ex), name)
+        c = Context(c, envof(ex), name)
     end
 
-    push(code, :($(c.trap_ex)($(quot(ex)), $(c.scope_ex))) )    
+    if c.pred(ex)
+        push(code, :($(c.trap_ex)($(quot(ex)), $(c.scope_ex))) )
+    end
     for arg in argsof(ex)
-        if is_trap(arg) || !(arg.loc.ex === nothing || isa(arg, LocNode))
+        if !isa(arg, BlockNode) && c.pred(arg)
             push(code, :($(c.trap_ex)($(quot(arg)), $(c.scope_ex))) )
         end           
         if is_emittable(arg)
