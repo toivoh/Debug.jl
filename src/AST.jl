@@ -60,9 +60,10 @@ type ExNode{T} <: Node
 
     parent::Union(ExNode, Nothing)
     loc::Loc
+    state
 
     function ExNode(format::T, args)
-        ex = new(format, Node[args...], nothing)
+        ex = new(format, Node[args...], nothing) #, undef, undef
         for arg in ex.args; set_parent(arg, ex); end
         ex
     end
@@ -83,11 +84,12 @@ typealias BlockNode ExNode{Block}
 type Leaf{T} <: Node
     format::T
 
-    Leaf(format::T) = new(format, nothing)
-    Leaf(args...)   = new(T(args...), nothing)
-
     parent::Union(ExNode, Nothing)
     loc::Loc
+    state
+
+    Leaf(format::T) = new(format, nothing)     #, undef, undef
+    Leaf(args...)   = new(T(args...), nothing) #, undef, undef
 end
 Leaf{T}(format::T) = Leaf{T}(format)
 
