@@ -15,6 +15,8 @@ function trap(node::Node, scope::Scope)
         print("\ndebug:$(node.loc.line)> "); flush(OUTPUT_STREAM)
         cmd = readline(stdin_stream)[1:end-1]
         if cmd == "s";     break
+        elseif cmd == "n"; stepover!(state); break
+        elseif cmd == "o"; stepout!(state);  break
         elseif cmd == "c"; continue!(state); break
         elseif cmd == "q"; continue!(state); error("interrupted")
         end
