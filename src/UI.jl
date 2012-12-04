@@ -20,7 +20,8 @@ function trap(node::Node, scope::Scope)
         end
 
         try
-            ex, nc = parse(cmd)
+            ex0, nc = parse(cmd)
+            ex = interpolate({:st => state, :n => node, :s => scope}, ex0)
             r = debug_eval(scope, ex)
             if !is(r, nothing); show(r); println(); end
         catch e
@@ -28,5 +29,19 @@ function trap(node::Node, scope::Scope)
         end
     end    
 end
+
+interpolate(d::Dict, ex) = ex  # including QuoteNode
+function interpolate(d::Dict, ex::Ex)
+    if is_expr(ex, :$, 1)
+        translate(d, argof(ex, 1))
+    elseif headof(ex) === :quote
+        ex
+    else
+        expr(headof(ex), {interpolate(d, arg) for arg in ex.args})
+    end
+end
+
+translate(d::Dict, ex) = error("translate: unimplemented for ex=$ex")
+translate(d::Dict, ex::Symbol) = has(d, ex) ? quot(d[ex]) : PLeaf(ex)
 
 end # module
