@@ -16,7 +16,6 @@ export Ex, Node, ExNode
 export is_emittable
 export ExValue
 
-export exnode
 
 # ---- Env: analysis-time scope -----------------------------------------------
 
@@ -59,7 +58,16 @@ type Node{T}
     loc::Loc
     state
     
-    Node(value::T) = new(value, nothing)
+    function Node(value::T)
+        node = new(value, nothing)
+        if T <: ExValue
+            for arg in argsof(node)
+                set_parent(arg, node)
+            end            
+        end
+        node
+    end
+#    Node(value::T) = new(value, nothing)
 end
 Node{T}(value::T) = Node{T}(value)
 
@@ -115,18 +123,6 @@ exof(fmt::Union(Plain, Sym, Loc)) = fmt.ex
 valueof(node::Node) = node.value
 
 is_emittable(ex) = true
-
-
-
-#exnode(value::ExValue) = Node(value)
-function exnode(value::ExValue)
-    node = Node(value)
-    for arg in argsof(node)
-        set_parent(arg, node)
-    end
-    node
-end
-
 
 
 end # module
