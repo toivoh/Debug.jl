@@ -54,12 +54,14 @@ function decorate(states::Vector, args::Vector)
 end
 decorate(states::Vector,ex::Ex)=ExNode(headof(ex), decorate(states,argsof(ex)))
 
-decorate(s::State,       ex)                 = isa(ex, Leaf) ? ex : PLeaf(ex)
-decorate(s::SimpleState, ex::LineNumberNode) = LocNode(ex, ex.line)
-decorate(s::SimpleState, ex::SymbolNode)     = decorate(s, ex.name)
-decorate(s::Def, ex::Symbol) = (add_defined( s.env,ex); SymNode(ex,raw(s.env)))
-decorate(s::Lhs, ex::Symbol) = (add_assigned(s.env,ex); SymNode(ex,raw(s.env)))
-decorate(s::SimpleState, ex::Symbol) = SymNode(ex,raw(s.env))
+decorate(s::State, ex) = (v = translate(s,ex); isa(v, Node) ? v : Leaf(v))
+decorate(s::SimpleState, ex::SymbolNode) = decorate(s, ex.name)
+
+translate(s::State,       ex)                 = isa(ex, Node) ? ex : PLeaf(ex)
+translate(s::SimpleState, ex::LineNumberNode) = Loc(ex, ex.line)
+translate(s::Def, ex::Symbol) = (add_defined( s.env,ex); Sym(ex,raw(s.env)))
+translate(s::Lhs, ex::Symbol) = (add_assigned(s.env,ex); Sym(ex,raw(s.env)))
+translate(s::SimpleState, ex::Symbol) = Sym(ex,raw(s.env))
 
 # SplitDef: Def with different scopes for left and right side, e.g.
 # let x_inner = y_outer   or   type T_outer{S_inner} <: Q_outer

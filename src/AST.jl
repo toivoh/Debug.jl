@@ -9,7 +9,7 @@ import Base.has, Base.show
 
 export Env, LocalEnv, NoEnv, child, add_assigned, add_defined
 export LocNode, PLeaf, SymNode, BlockNode
-export Trap, Loc, Block
+export Trap, Loc, Block, Sym
 export headof, argsof, argof, nargsof
 export parentof, envof, exof, valueof
 export Ex, Node, ExNode, Leaf
@@ -47,9 +47,9 @@ abstract Trap
 
 type Plain;   ex; end
 type Sym;     ex::Symbol; env::Env;  end
-type Loc{T};  ex::T; line::Int; file::String;  end
-Loc{T}(ex::T, line, file) = Loc{T}(ex, line, string(file))
-Loc{T}(ex::T, line)       = Loc{T}(ex, line, "")
+type Loc;     ex; line::Int; file::String;  end
+Loc(ex, line, file) = Loc(ex, line, string(file))
+Loc(ex, line)       = Loc(ex, line, "")
 
 
 abstract Node
