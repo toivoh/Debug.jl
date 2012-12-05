@@ -9,7 +9,7 @@ import Base.has, Base.show, Base.isequal
 
 export Env, LocalEnv, NoEnv, child, add_assigned, add_defined
 export LocNode, PLeaf, SymNode
-export Trap, Loc, Sym, Plain
+export Trap, Loc, Plain
 export headof, argsof, argof, nargsof
 export parentof, envof, exof, valueof
 export Ex, Node, ExNode
@@ -49,7 +49,6 @@ add_assigned(env::LocalEnv, sym::Symbol) = add(env.assigned, sym)
 abstract Trap
 
 type Plain;   ex; end
-type Sym;     ex::Symbol; env::Env;  end
 type Loc;     ex; line::Int; file::String;  end
 Loc(ex, line, file) = Loc(ex, line, string(file))
 Loc(ex, line)       = Loc(ex, line, "")
@@ -90,7 +89,7 @@ isequal(x::Node, y::Node) = isequal(x.value, y.value)
 
 
 typealias PLeaf   Node{Plain}
-typealias SymNode Node{Sym}
+typealias SymNode Node{Symbol}
 typealias LocNode Node{Loc}
 
 show(io::IO, ex::Node) = (print(io,"Node("); show(io,ex.value); print(io,")"))
@@ -113,8 +112,9 @@ argof(ex, k) = argsof(ex)[k]
 envof(node::Node) = node.state.env # will only work for SimpleState:s
 
 exof(node::Node) = exof(valueof(node))
+exof(node::SymNode) = valueof(node)
 exof(node::Ex)   = error("Not applicable!")
-exof(fmt::Union(Plain, Sym, Loc)) = fmt.ex
+exof(value::Union(Plain, Loc)) = value.ex
 
 valueof(node::Node) = node.value
 

@@ -71,9 +71,9 @@ function decorate(s::State, ex)
 end
 
 decorate(s::SimpleState, ex::LineNumberNode) = Loc(ex, ex.line)
-decorate(s::Def, ex::Symbol) = (add_defined( s.env,ex); Sym(ex,raw(s.env)))
-decorate(s::Lhs, ex::Symbol) = (add_assigned(s.env,ex); Sym(ex,raw(s.env)))
-decorate(s::SimpleState, ex::Symbol) = Sym(ex,raw(s.env))
+decorate(s::Def, ex::Symbol) = (add_defined( s.env,ex); ex)
+decorate(s::Lhs, ex::Symbol) = (add_assigned(s.env,ex); ex)
+decorate(s::SimpleState, ex::Symbol) = ex
 
 # SplitDef: Def with different scopes for left and right side, e.g.
 # let x_inner = y_outer   or   type T_outer{S_inner} <: Q_outer
