@@ -30,7 +30,7 @@ const untyped_comprehensions = [:comprehension, dict_comprehension]
 const typed_comprehensions =   [typed_comprehension, typed_dict_comprehension]
 
 
-# ---- decorate(): add scoping info to AST ------------------------------------
+# ---- wrap(): add scoping info to AST ------------------------------------
 # Rewrites AST, exchanging Expr:s and leaves for Node:s.
 # Adds scope info, classifies nodes, etc.
 
@@ -49,19 +49,19 @@ end
 raw(env::TypeEnv) = env.env
 raw(env::Env)     = env
 
-function decorate(states::Vector, args::Vector) 
-    {decorate(s, arg) for (s, arg) in zip(states, args)}
+function wrap(states::Vector, args::Vector) 
+    {wrap(s, arg) for (s, arg) in zip(states, args)}
 end
-decorate(states::Vector,ex::Ex)=ExNode(headof(ex), decorate(states,argsof(ex)))
+decorate(states::Vector,ex::Ex)=ExNode(headof(ex), wrap(states,argsof(ex)))
 
-decorate(s::State, ex) = (v = translate(s,ex); isa(v, Node) ? v : Leaf(v))
-decorate(s::SimpleState, ex::SymbolNode) = decorate(s, ex.name)
+wrap(s::State, ex) = (v = decorate(s,ex); isa(v, Node) ? v : Leaf(v))
+wrap(s::SimpleState, ex::SymbolNode) = wrap(s, ex.name)
 
-translate(s::State,       ex)                 = isa(ex, Node) ? ex : PLeaf(ex)
-translate(s::SimpleState, ex::LineNumberNode) = Loc(ex, ex.line)
-translate(s::Def, ex::Symbol) = (add_defined( s.env,ex); Sym(ex,raw(s.env)))
-translate(s::Lhs, ex::Symbol) = (add_assigned(s.env,ex); Sym(ex,raw(s.env)))
-translate(s::SimpleState, ex::Symbol) = Sym(ex,raw(s.env))
+decorate(s::State,       ex)                 = isa(ex, Node) ? ex : PLeaf(ex)
+decorate(s::SimpleState, ex::LineNumberNode) = Loc(ex, ex.line)
+decorate(s::Def, ex::Symbol) = (add_defined( s.env,ex); Sym(ex,raw(s.env)))
+decorate(s::Lhs, ex::Symbol) = (add_assigned(s.env,ex); Sym(ex,raw(s.env)))
+decorate(s::SimpleState, ex::Symbol) = Sym(ex,raw(s.env))
 
 # SplitDef: Def with different scopes for left and right side, e.g.
 # let x_inner = y_outer   or   type T_outer{S_inner} <: Q_outer
@@ -69,13 +69,13 @@ type SplitDef <: State;
     ls::Env;
     rs::Env;
 end
-decorate(s::SplitDef, ex) = decorate(Def(s.ls), ex)
-function decorate(s::SplitDef, ex::Ex)
+wrap(s::SplitDef, ex) = wrap(Def(s.ls), ex)
+function wrap(s::SplitDef, ex::Ex)
     head, nargs = headof(ex), nargsof(ex)
     if     head === :(=);   decorate([Def(s.ls), Rhs(s.rs)],                ex)
     elseif head === :(<:);  decorate([s,         Rhs(s.ls)],                ex)
     elseif head === :curly; decorate([s,         fill(Def(s.rs), nargs-1)], ex)
-    else                    decorate(Def(s.ls), ex)
+    else                    wrap(Def(s.ls), ex)
     end
 end
 
@@ -84,7 +84,7 @@ type Sig  <: State;
     s::SimpleState;  # state with outer Env, to define/assign f
     inner::Env;      # Env inside the method
 end
-function decorate(s::Sig, ex::Ex)
+function wrap(s::Sig, ex::Ex)
     @assert contains([:call, :curly], headof(ex))
     if is_expr(argof(ex,1), :curly);first = s
     else;                           first = (isa(s.s,Def) ? s.s : Lhs(s.s.env))
@@ -131,15 +131,15 @@ function argstates(state::SimpleState, ex)
     end
 end
 
-function decorate(state::SimpleState, ex::Ex)
+function wrap(state::SimpleState, ex::Ex)
     head, args  = headof(ex), argsof(ex)
     if head === :line;                     return LocNode(ex, args...)
     elseif contains([:quote, :top], head); return PLeaf(ex)
-    elseif head === :macrocall; return decorate(state, macroexpand(ex))
+    elseif head === :macrocall; return wrap(state, macroexpand(ex))
     end
 
     states = argstates(state, ex)
-    ExNode(head===:block ? Block(raw(state.env)) : head, decorate(states,args))
+    ExNode(head===:block ? Block(raw(state.env)) : head, wrap(states,args))
 end
 
 # ---- post-decoration processing ---------------------------------------------
@@ -185,12 +185,12 @@ function postprocess_env!(envs::Set{LocalEnv}, env::LocalEnv)
     env.assigned = env.defined | p_assigned
 end
 
-# ---- analyze(): decorate and then propagate source file info among LocNode's
+# ---- analyze(): wrap and then propagate source file info among LocNode's
 
 analyze(ex, process_envs::Bool) = analyze(Rhs(NoEnv()), ex, process_envs)
 analyze(env::Env, ex, process_envs::Bool) = analyze(Rhs(env), ex, process_envs)
 function analyze(s::State, ex, process_envs::Bool)
-    node = decorate(s, ex)
+    node = wrap(s, ex)
     set_source!(node, nothing, -1, "")
     if process_envs; postprocess_env!(Set{LocalEnv}(), node); end
     node
