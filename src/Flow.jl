@@ -22,7 +22,7 @@ typealias BPNode Leaf{BreakPoint}
 is_emittable(::BPNode) = false
 
 macro bp()
-    Leaf(BreakPoint())
+    leaf(BreakPoint())
 end
 
 

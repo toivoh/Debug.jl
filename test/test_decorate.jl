@@ -1,7 +1,7 @@
 include(find_in_path("Debug.jl"))
 
 module TestDecorate
-export @syms, @noenv
+export @syms, @noenv, @test_decorate
 using Base, Debug.AST, Debug.Meta, Debug.Analysis
 
 macro assert_fails(ex)
@@ -21,15 +21,15 @@ end
 
 macro syms(args...)
     if length(args) == 0
-        Leaf(BlockEnv([],[]))
+        leaf(BlockEnv([],[]))
     elseif is_expr(args[end], :hcat) || is_expr(args[end], :vcat)
-        Leaf(BlockEnv(args[1:end-1], args[end].args))
+        leaf(BlockEnv(args[1:end-1], args[end].args))
     else
-        Leaf(BlockEnv(args, []))
+        leaf(BlockEnv(args, []))
     end
 end
 macro noenv()
-    Leaf(NoEnv())
+    leaf(NoEnv())
 end
 
 rebuild(node::Leaf) = exof(node)
@@ -58,6 +58,8 @@ function test_decorate(code)
     ecode = macroexpand(code)
     dcode = analyze(NoEnv(), ecode, false)
     rcode = rebuild(dcode)
+#     @show dcode
+#     @show rcode
     @assert rcode == ecode
 end
 macro test_decorate(ex)

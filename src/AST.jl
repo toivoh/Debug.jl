@@ -16,7 +16,7 @@ export Ex, Node, ExNode, Leaf
 export is_emittable
 export ExValue
 
-export exnode
+export exnode, leaf
 
 # ---- Env: analysis-time scope -----------------------------------------------
 
@@ -58,12 +58,13 @@ if false ###################################################################
 
 type Node{T}
     value::T
-    parent::Union(ExNode, Nothing)
+    parent::Union(Node, Nothing)
     loc::Loc
     state
     
     Node(value::T) = new(value, nothing)
 end
+Node{T}(value::T) = Node{T}(value)
 
 type ExValue{T}
     format::T
@@ -75,10 +76,11 @@ ExValue{T}(format::T, args) = ExValue{T}(format, args)
 
 type Block;  env::Env;  end
 
-typealias ExNode Node{ExValue{Symbol}}
 typealias BlockNode Node{ExValue{Block}}
+typealias ExNode Union(Node{ExValue{Symbol}}, BlockNode)
 
-typealias Ex Union(Expr, ExNode, BlockNode)
+
+typealias Ex Union(Expr, ExNode)
 
 isequal(x::Node, y::Node) = isequal(x.value, y.value)
 
@@ -121,6 +123,9 @@ is_emittable(ex) = true
 
 
 exnode(value::ExValue) = Node(value)
+typealias Leaf{T} Node{T}
+
+leaf(value) = Node(value)
 
 else ######################################################################
 
@@ -216,6 +221,8 @@ is_emittable(ex) = true
 
 
 exnode(value::ExValue) = ExNode(value.format, value.args)
+
+leaf(value) = Leaf(value)
 
 end ############################################################
 

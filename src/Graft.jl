@@ -68,7 +68,7 @@ function code_scope(scopesym::Symbol, parent, env::Env, syms)
 end
 
 instrument(c::Context, ex) = ex # todo: remove?
-instrument(c::Context, node::Leaf) = exof(node)
+instrument(c::Context, node::Node) = exof(node)
 function instrument(c::Context, ex::Ex)
     expr(headof(ex), {instrument(c, arg) for arg in argsof(ex)})
 end
@@ -119,7 +119,7 @@ const updating_ops = {
  :>>>= => :>>>}
 
 graft(s::LocalScope, ex)         = ex
-graft(s::LocalScope, node::Leaf) = exof(node)
+graft(s::LocalScope, node::Node) = exof(node)
 function graft(s::LocalScope, ex::SymNode)
     sym = exof(ex)
     (has(s,sym) && !has(envof(ex),sym)) ? expr(:call,quot(getter(s,sym))) : sym
@@ -136,7 +136,7 @@ function graft(s::LocalScope, ex::Ex)
             else; error("No setter in scope found for $(sym)!")
             end
         elseif is_expr(lhs, :tuple)  # assignment to tuple
-            tup = PLeaf(gensym("tuple")) # don't recurse into tup
+            tup = leaf(Plain(gensym("tuple"))) # don't recurse into tup
             return graft(s, expr(:block,
                  :($tup  = $rhs    ),
                 {:($dest = $tup[$k]) for (k,dest)=enumerate(argsof(lhs))}...))

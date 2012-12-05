@@ -57,7 +57,7 @@ wrap(s::State, ex) = enwrap(s, decorate(s,ex))
 
 #enwrap(s::State, node::Node) = node
 enwrap(s::State, value::ExValue) = exnode(value)
-enwrap(s::State, value)          = Leaf(value)
+enwrap(s::State, value)          = leaf(value)
 
 
 decorate(states::Vector, ex::Ex) = ExValue(headof(ex), wrap(states,argsof(ex)))
@@ -159,7 +159,7 @@ function set_source!(ex::LocNode, locex, line, file)
     ex.format.file = file
     ex.loc = ex.format
 end
-set_source!(ex::Leaf, locex, line, file) = (ex.loc = Loc(locex, line, file))
+set_source!(ex::Node, locex, line, file) = (ex.loc = Loc(locex, line, file))
 function set_source!(ex::ExNode, locex, line, file)
     ex.loc = Loc(locex, line, file)
     locex  = nothing

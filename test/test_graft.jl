@@ -21,7 +21,7 @@ trap(::Any, ::Scope) = nothing
 trap(g::Leaf{Graft}, scope::Scope) = debug_eval(scope, valueof(g).ex)
 
 macro graft(ex)
-    Leaf(Graft(ex))
+    leaf(Graft(ex))
 end
 macro test_graft(ex)
     :(@instrument trap $(esc(ex)))
