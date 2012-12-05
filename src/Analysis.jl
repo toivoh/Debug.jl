@@ -52,10 +52,11 @@ raw(env::Env)     = env
 function wrap(states::Vector, args::Vector) 
     {wrap(s, arg) for (s, arg) in zip(states, args)}
 end
-decorate(states::Vector,ex::Ex)=ExNode(headof(ex), wrap(states,argsof(ex)))
-
-wrap(s::State, ex) = (v = decorate(s,ex); isa(v, Node) ? v : Leaf(v))
 wrap(s::SimpleState, ex::SymbolNode) = wrap(s, ex.name)
+wrap(s::State, ex) = (v = decorate(s,ex); isa(v, Node) ? v : Leaf(v))
+
+
+decorate(states::Vector,ex::Ex)=ExNode(headof(ex), wrap(states,argsof(ex)))
 
 decorate(s::State,       ex)                 = isa(ex, Node) ? ex : PLeaf(ex)
 decorate(s::SimpleState, ex::LineNumberNode) = Loc(ex, ex.line)
@@ -69,13 +70,13 @@ type SplitDef <: State;
     ls::Env;
     rs::Env;
 end
-wrap(s::SplitDef, ex) = wrap(Def(s.ls), ex)
-function wrap(s::SplitDef, ex::Ex)
+decorate(s::SplitDef, ex) = decorate(Def(s.ls), ex)
+function decorate(s::SplitDef, ex::Ex)
     head, nargs = headof(ex), nargsof(ex)
     if     head === :(=);   decorate([Def(s.ls), Rhs(s.rs)],                ex)
     elseif head === :(<:);  decorate([s,         Rhs(s.ls)],                ex)
     elseif head === :curly; decorate([s,         fill(Def(s.rs), nargs-1)], ex)
-    else                    wrap(Def(s.ls), ex)
+    else                    decorate(Def(s.ls), ex)
     end
 end
 
@@ -84,7 +85,7 @@ type Sig  <: State;
     s::SimpleState;  # state with outer Env, to define/assign f
     inner::Env;      # Env inside the method
 end
-function wrap(s::Sig, ex::Ex)
+function decorate(s::Sig, ex::Ex)
     @assert contains([:call, :curly], headof(ex))
     if is_expr(argof(ex,1), :curly);first = s
     else;                           first = (isa(s.s,Def) ? s.s : Lhs(s.s.env))
@@ -131,11 +132,11 @@ function argstates(state::SimpleState, ex)
     end
 end
 
-function wrap(state::SimpleState, ex::Ex)
+function decorate(state::SimpleState, ex::Ex)
     head, args  = headof(ex), argsof(ex)
     if head === :line;                     return LocNode(ex, args...)
     elseif contains([:quote, :top], head); return PLeaf(ex)
-    elseif head === :macrocall; return wrap(state, macroexpand(ex))
+    elseif head === :macrocall; return decorate(state, macroexpand(ex))
     end
 
     states = argstates(state, ex)
