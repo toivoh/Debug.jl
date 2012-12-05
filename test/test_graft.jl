@@ -15,13 +15,13 @@ macro assert_fails(ex)
 end
 
 type Graft <: Trap;  ex;  end
-is_emittable(::Leaf{Graft}) = false
+is_emittable(::Node{Graft}) = false
 
 trap(::Any, ::Scope) = nothing
-trap(g::Leaf{Graft}, scope::Scope) = debug_eval(scope, valueof(g).ex)
+trap(g::Node{Graft}, scope::Scope) = debug_eval(scope, valueof(g).ex)
 
 macro graft(ex)
-    leaf(Graft(ex))
+    Node(Graft(ex))
 end
 macro test_graft(ex)
     :(@instrument trap $(esc(ex)))

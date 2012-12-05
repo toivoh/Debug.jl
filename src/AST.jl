@@ -12,11 +12,11 @@ export LocNode, PLeaf, SymNode, BlockNode
 export Trap, Loc, Block, Sym, Plain
 export headof, argsof, argof, nargsof
 export parentof, envof, exof, valueof
-export Ex, Node, ExNode, Leaf
+export Ex, Node, ExNode
 export is_emittable
 export ExValue
 
-export exnode, leaf
+export exnode
 
 # ---- Env: analysis-time scope -----------------------------------------------
 
@@ -104,7 +104,6 @@ argsof(ex::Union(ExNode, BlockNode)) = valueof(ex).args
 nargsof(ex)  = length(argsof(ex))
 argof(ex, k) = argsof(ex)[k]
 
-#envof(node::Union(ExNode, Leaf)) = envof(node.format)
 envof(node::BlockNode) = envof(valueof(node).format)
 envof(node::SymNode)   = envof(valueof(node))
 envof(fmt::Union(Block, Sym)) = fmt.env
@@ -127,10 +126,6 @@ function exnode(value::ExValue)
     end
     node
 end
-
-typealias Leaf{T} Node{T}
-
-leaf(value) = Node(value)
 
 
 

@@ -10,7 +10,7 @@ export @bp, BPNode, DBState
 export continue!, singlestep!, stepover!, stepout!
 
 is_trap(::LocNode)          = false
-is_trap{T<:Trap}(::Leaf{T}) = true
+is_trap{T<:Trap}(::Node{T}) = true
 is_trap(node::BlockNode)    = true
 is_trap(node::Node)         = !(node.loc.ex === nothing)
 is_trap(ex)                 = false
@@ -18,11 +18,11 @@ is_trap(ex)                 = false
 instrument(trap_ex, ex) = Graft.instrument(is_trap, trap_ex, analyze(ex, true))
 
 type BreakPoint <: Trap; end
-typealias BPNode Leaf{BreakPoint}
+typealias BPNode Node{BreakPoint}
 is_emittable(::BPNode) = false
 
 macro bp()
-    leaf(BreakPoint())
+    Node(BreakPoint())
 end
 
 

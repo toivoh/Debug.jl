@@ -21,24 +21,24 @@ end
 
 macro syms(args...)
     if length(args) == 0
-        leaf(BlockEnv([],[]))
+        Node(BlockEnv([],[]))
     elseif is_expr(args[end], :hcat) || is_expr(args[end], :vcat)
-        leaf(BlockEnv(args[1:end-1], args[end].args))
+        Node(BlockEnv(args[1:end-1], args[end].args))
     else
-        leaf(BlockEnv(args, []))
+        Node(BlockEnv(args, []))
     end
 end
 macro noenv()
-    leaf(NoEnv())
+    Node(NoEnv())
 end
 
-rebuild(node::Leaf) = exof(node)
-rebuild(node::Union(Leaf{BlockEnv},Leaf{NoEnv})) = node
+rebuild(node::Node) = exof(node)
+rebuild(node::Union(Node{BlockEnv},Node{NoEnv})) = node
 rebuild(ex::Ex) = expr(headof(ex), {rebuild(arg) for arg in argsof(ex)})
 function rebuild(block::BlockNode)
     env = envof(block)
     for arg in argsof(block)
-        if isa(arg, Leaf{BlockEnv})
+        if isa(arg, Node{BlockEnv})
             benv = valueof(arg)
             if !(env.defined == benv.defined)
                 error("env.defined = $(env.defined) != $(benv.defined)")
@@ -47,7 +47,7 @@ function rebuild(block::BlockNode)
             if !(just_assigned == benv.assigned)
                 error("just_assigned = $(just_assigned) != $(benv.assigned)")
             end
-        elseif isa(arg, Leaf{NoEnv})
+        elseif isa(arg, Node{NoEnv})
             @assert isa(env, NoEnv)
         end
     end

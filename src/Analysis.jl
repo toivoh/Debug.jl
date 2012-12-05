@@ -57,7 +57,7 @@ wrap(s::State, ex) = enwrap(s, decorate(s,ex))
 
 #enwrap(s::State, node::Node) = node
 enwrap(s::State, value::ExValue) = exnode(value)
-enwrap(s::State, value)          = leaf(value)
+enwrap(s::State, value)          = Node(value)
 
 
 decorate(states::Vector, ex::Ex) = ExValue(headof(ex), wrap(states,argsof(ex)))

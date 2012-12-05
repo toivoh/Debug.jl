@@ -136,7 +136,7 @@ function graft(s::LocalScope, ex::Ex)
             else; error("No setter in scope found for $(sym)!")
             end
         elseif is_expr(lhs, :tuple)  # assignment to tuple
-            tup = leaf(Plain(gensym("tuple"))) # don't recurse into tup
+            tup = Node(Plain(gensym("tuple"))) # don't recurse into tup
             return graft(s, expr(:block,
                  :($tup  = $rhs    ),
                 {:($dest = $tup[$k]) for (k,dest)=enumerate(argsof(lhs))}...))

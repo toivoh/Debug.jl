@@ -46,6 +46,6 @@ function interpolate(d::Dict, ex::Ex)
 end
 
 translate(d::Dict, ex) = error("translate: unimplemented for ex=$ex")
-translate(d::Dict, ex::Symbol) = has(d, ex) ? quot(d[ex]) : leaf(Plain(ex))
+translate(d::Dict, ex::Symbol) = has(d, ex) ? quot(d[ex]) : Node(Plain(ex))
 
 end # module
