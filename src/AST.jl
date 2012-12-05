@@ -75,10 +75,10 @@ end
 Node{T}(value::T, args...) = Node{T}(value, args...)
 
 type ExValue
-    format::Symbol
+    head::Symbol
     args::Vector{Node}
 
-    ExValue(format::Symbol, args) = new(format, Node[args...])
+    ExValue(head::Symbol, args) = new(head, Node[args...])
 end
 
 typealias ExNode Node{ExValue}
@@ -103,7 +103,7 @@ end
 parentof(ex::Node) = ex.parent
 
 headof(ex::Expr)      = ex.head
-headof(ex::ExNode)    = valueof(ex).format
+headof(ex::ExNode)    = valueof(ex).head
 
 argsof(ex::Expr)                     = ex.args
 argsof(ex::ExNode) = valueof(ex).args
