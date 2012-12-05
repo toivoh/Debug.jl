@@ -62,7 +62,13 @@ enwrap(s::State, value) = Leaf(value)
 
 decorate(states::Vector, ex::Ex) = ExValue(headof(ex), wrap(states,argsof(ex)))
 
-decorate(s::State,       ex)                 = isa(ex, Node) ? ex : Plain(ex)
+function decorate(s::State, ex)
+    if     isa(ex, Leaf);   ex.format
+    elseif isa(ex, ExNode); ExValue(ex.format, ex.args)
+    else                    Plain(ex)
+    end
+end
+
 decorate(s::SimpleState, ex::LineNumberNode) = Loc(ex, ex.line)
 decorate(s::Def, ex::Symbol) = (add_defined( s.env,ex); Sym(ex,raw(s.env)))
 decorate(s::Lhs, ex::Symbol) = (add_assigned(s.env,ex); Sym(ex,raw(s.env)))

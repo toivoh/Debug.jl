@@ -5,7 +5,7 @@
 
 module AST
 using Base
-import Base.has, Base.show
+import Base.has, Base.show, Base.isequal
 
 export Env, LocalEnv, NoEnv, child, add_assigned, add_defined
 export LocNode, PLeaf, SymNode, BlockNode
@@ -101,6 +101,8 @@ type Leaf{T} <: Node
     Leaf(args...)   = new(T(args...), nothing) #, undef, undef
 end
 Leaf{T}(format::T) = Leaf{T}(format)
+
+isequal(x::Leaf, y::Leaf) = isequal(x.format, y.format)
 
 
 typealias PLeaf   Leaf{Plain}
