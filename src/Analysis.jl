@@ -55,17 +55,16 @@ end
 wrap(s::SimpleState, ex::SymbolNode) = wrap(s, ex.name)
 wrap(s::State, ex) = enwrap(s, decorate(s,ex))
 
-enwrap(s::State, node::Node) = node
-enwrap(s::State, value::ExValue) = ExNode(value.format, value.args)
-enwrap(s::State, value) = Leaf(value)
+#enwrap(s::State, node::Node) = node
+enwrap(s::State, value::ExValue) = exnode(value)
+enwrap(s::State, value)          = Leaf(value)
 
 
 decorate(states::Vector, ex::Ex) = ExValue(headof(ex), wrap(states,argsof(ex)))
 
 function decorate(s::State, ex)
-    if     isa(ex, Leaf);   ex.format
-    elseif isa(ex, ExNode); ExValue(ex.format, ex.args)
-    else                    Plain(ex)
+    if isa(ex, Node); valueof(ex)
+    else              Plain(ex)
     end
 end
 

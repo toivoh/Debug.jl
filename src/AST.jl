@@ -16,6 +16,7 @@ export Ex, Node, ExNode, Leaf
 export is_emittable
 export ExValue
 
+export exnode
 
 # ---- Env: analysis-time scope -----------------------------------------------
 
@@ -51,6 +52,78 @@ type Sym;     ex::Symbol; env::Env;  end
 type Loc;     ex; line::Int; file::String;  end
 Loc(ex, line, file) = Loc(ex, line, string(file))
 Loc(ex, line)       = Loc(ex, line, "")
+
+
+if false ###################################################################
+
+type Node{T}
+    value::T
+    parent::Union(ExNode, Nothing)
+    loc::Loc
+    state
+    
+    Node(value::T) = new(value, nothing)
+end
+
+type ExValue{T}
+    format::T
+    args::Vector{Node}
+
+    ExValue(format::T, args) = new(format, Node[args...])
+end
+ExValue{T}(format::T, args) = ExValue{T}(format, args)
+
+type Block;  env::Env;  end
+
+typealias ExNode Node{ExValue{Symbol}}
+typealias BlockNode Node{ExValue{Block}}
+
+typealias Ex Union(Expr, ExNode, BlockNode)
+
+isequal(x::Node, y::Node) = isequal(x.value, y.value)
+
+
+typealias PLeaf   Node{Plain}
+typealias SymNode Node{Sym}
+typealias LocNode Node{Loc}
+
+show(io::IO, ex::Node) = (print(io,"Node("); show(io,ex.value); print(io,")"))
+
+function set_parent(ex::Node, parent::Node)
+    if parentof(ex) === nothing; ex.parent = parent
+    else; error("$ex already has a parent!")
+    end
+end
+parentof(ex::Node) = ex.parent
+
+headof(ex::Expr)      = ex.head
+headof(ex::ExNode)    = valueof(ex).format
+headof(ex::BlockNode) = :block
+
+argsof(ex::Expr)                     = ex.args
+argsof(ex::Union(ExNode, BlockNode)) = valueof(ex).args
+nargsof(ex)  = length(argsof(ex))
+argof(ex, k) = argsof(ex)[k]
+
+#envof(node::Union(ExNode, Leaf)) = envof(node.format)
+envof(node::BlockNode) = envof(valueof(node).format)
+envof(node::SymNode)   = envof(valueof(node))
+envof(fmt::Union(Block, Sym)) = fmt.env
+
+exof(node::Node) = exof(valueof(node))
+exof(node::Ex)   = error("Not applicable!")
+exof(fmt::Union(Plain, Sym, Loc)) = fmt.ex
+
+valueof(node::Node) = node.value
+
+is_emittable(ex) = true
+
+
+
+exnode(value::ExValue) = Node(value)
+
+else ######################################################################
+
 
 
 abstract Node
@@ -136,8 +209,15 @@ envof(fmt::Union(Block, Sym))    = fmt.env
 exof(node::Leaf) = exof(node.format)
 exof(fmt::Union(Plain, Sym, Loc)) = fmt.ex
 
-valueof(node::Leaf) = node.format
+valueof(node::Leaf)   = node.format
+valueof(node::ExNode) = ExValue(node.format, node.args)
 
 is_emittable(ex) = true
+
+
+exnode(value::ExValue) = ExNode(value.format, value.args)
+
+end ############################################################
+
 
 end # module
