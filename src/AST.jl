@@ -53,9 +53,6 @@ type Loc;     ex; line::Int; file::String;  end
 Loc(ex, line, file) = Loc(ex, line, string(file))
 Loc(ex, line)       = Loc(ex, line, "")
 
-
-if 1==1 ###################################################################
-
 type Node{T}
     value::T
     parent::Union(Node, Nothing)
@@ -135,104 +132,6 @@ typealias Leaf{T} Node{T}
 
 leaf(value) = Node(value)
 
-else ######################################################################
-
-
-
-abstract Node
-
-type ExNode{T} <: Node
-    format::T
-    args::Vector{Node}
-
-    parent::Union(ExNode, Nothing)
-    loc::Loc
-    state
-
-    function ExNode(format::T, args)
-        ex = new(format, Node[args...], nothing) #, undef, undef
-        for arg in ex.args; set_parent(arg, ex); end
-        ex
-    end
-    ExNode(args...) = ExNode(T(args[1:end-1]...), args[end])
-end
-ExNode{T}(format::T, args) = ExNode{T}(format, args)
-function show(io::IO, ex::ExNode) 
-    print(io, "ExNode("); 
-    show(io, ex.format); print(io, ", ")
-    show(io, ex.args);   print(io, ")")
-end
-
-type ExValue{T}
-    format::T
-    args::Vector{Node}
-
-    ExValue(format::T, args) = new(format, Node[args...])
-end
-ExValue{T}(format::T, args) = ExValue{T}(format, args)
-
-typealias Ex Union(Expr, ExNode)
-
-type Block;  env::Env;  end
-typealias BlockNode ExNode{Block}
-
-type Leaf{T} <: Node
-    format::T
-
-    parent::Union(ExNode, Nothing)
-    loc::Loc
-    state
-
-    Leaf(format::T) = new(format, nothing)     #, undef, undef
-    Leaf(args...)   = new(T(args...), nothing) #, undef, undef
-end
-Leaf{T}(format::T) = Leaf{T}(format)
-
-isequal(x::Leaf, y::Leaf) = isequal(x.format, y.format)
-
-
-typealias PLeaf   Leaf{Plain}
-typealias SymNode Leaf{Sym}
-typealias LocNode Leaf{Loc}
-
-show(io::IO, ex::Leaf) = (print(io,"Leaf("); show(io,ex.format); print(io,")"))
-function show(io::IO, ex::PLeaf) 
-    print(io,"PLeaf("); show(io,ex.format.ex); print(io,")")
-end
-
-
-function set_parent(ex::Union(ExNode, Leaf), parent::Node)
-    if parentof(ex) === nothing; ex.parent = parent
-    else; error("$ex already has a parent!")
-    end
-end
-parentof(ex::Union(ExNode, Leaf)) = ex.parent
-
-headof(ex::Expr)           = ex.head
-headof(ex::ExNode{Symbol}) = ex.format
-headof(ex::BlockNode)      = :block
-
-argsof(ex::Ex) = ex.args
-nargsof(ex)  = length(argsof(ex))
-argof(ex, k) = argsof(ex)[k]
-
-envof(node::Union(ExNode, Leaf)) = envof(node.format)
-envof(fmt::Union(Block, Sym))    = fmt.env
-
-exof(node::Leaf) = exof(node.format)
-exof(fmt::Union(Plain, Sym, Loc)) = fmt.ex
-
-valueof(node::Leaf)   = node.format
-valueof(node::ExNode) = ExValue(node.format, node.args)
-
-is_emittable(ex) = true
-
-
-exnode(value::ExValue) = ExNode(value.format, value.args)
-
-leaf(value) = Leaf(value)
-
-end ############################################################
 
 
 end # module
