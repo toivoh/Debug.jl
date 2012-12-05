@@ -57,11 +57,10 @@ Loc(ex, line)       = Loc(ex, line, "")
 type Node{T}
     value::T
     parent::Union(Node, Nothing)
-    loc::Loc
     state
+    loc::Loc
     
-    function Node(value::T)
-        node = new(value, nothing)
+    function set_args_parent(node::Node)
         if T <: ExValue
             for arg in argsof(node)
                 set_parent(arg, node)
@@ -69,9 +68,11 @@ type Node{T}
         end
         node
     end
-#    Node(value::T) = new(value, nothing)
+
+    Node(value::T)        = set_args_parent(new(value, nothing))
+    Node(value::T, state) = set_args_parent(new(value, nothing, state))
 end
-Node{T}(value::T) = Node{T}(value)
+Node{T}(value::T, args...) = Node{T}(value, args...)
 
 type ExValue{T}
     format::T
@@ -114,9 +115,7 @@ argsof(ex::Union(ExNode, BlockNode)) = valueof(ex).args
 nargsof(ex)  = length(argsof(ex))
 argof(ex, k) = argsof(ex)[k]
 
-envof(node::BlockNode) = envof(valueof(node).format)
-envof(node::SymNode)   = envof(valueof(node))
-envof(fmt::Union(Block, Sym)) = fmt.env
+envof(node::Node) = node.state.env # will only work for SimpleState:s
 
 exof(node::Node) = exof(valueof(node))
 exof(node::Ex)   = error("Not applicable!")

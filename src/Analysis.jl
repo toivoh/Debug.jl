@@ -49,15 +49,17 @@ end
 raw(env::TypeEnv) = env.env
 raw(env::Env)     = env
 
+raw(s::State) = s
+raw{T<:SimpleState}(s::T) = T(raw(s.env))
+
+
 function wrap(states::Vector, args::Vector) 
     {wrap(s, arg) for (s, arg) in zip(states, args)}
 end
 wrap(s::SimpleState, ex::SymbolNode) = wrap(s, ex.name)
 wrap(s::State, ex) = enwrap(s, decorate(s,ex))
 
-#enwrap(s::State, node::Node) = node
-#enwrap(s::State, value::ExValue) = exnode(value)
-enwrap(s::State, value)          = Node(value)
+enwrap(s::State, value) = Node(value, raw(s))
 
 
 decorate(states::Vector, ex::Ex) = ExValue(headof(ex), wrap(states,argsof(ex)))
@@ -79,18 +81,18 @@ type SplitDef <: State;
     ls::Env;
     rs::Env;
 end
-decorate(s::SplitDef, ex) = decorate(Def(s.ls), ex)
-function decorate(s::SplitDef, ex::Ex)
+wrap(s::SplitDef, ex) = wrap(Def(s.ls), ex)
+function wrap(s::SplitDef, ex::Ex)
     head, nargs = headof(ex), nargsof(ex)
-    if     head === :(=);   decorate([Def(s.ls), Rhs(s.rs)],                ex)
-    elseif head === :(<:);  decorate([s,         Rhs(s.ls)],                ex)
-    elseif head === :curly; decorate([s,         fill(Def(s.rs), nargs-1)], ex)
-    else                    decorate(Def(s.ls), ex)
+    if     head === :(=);   enwrap(s, decorate([Def(s.ls), Rhs(s.rs)], ex))
+    elseif head === :(<:);  enwrap(s, decorate([s,         Rhs(s.ls)], ex))
+    elseif head === :curly; enwrap(s, decorate([s, fill(Def(s.rs), nargs-1)], ex))
+    else                    wrap(Def(s.ls), ex)
     end
 end
 
 # Sig: (part of) function signature in function f(x) ... / f(x) = ...
-type Sig  <: State; 
+type Sig <: State; 
     s::SimpleState;  # state with outer Env, to define/assign f
     inner::Env;      # Env inside the method
 end
