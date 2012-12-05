@@ -1,11 +1,11 @@
 include(find_in_path("Debug.jl"))
 
 module TestTrap
-using Base, Debug
+using Base, Debug, Debug.AST
 
 firstline = -1
-trap(node::BlockNode, scope::Scope) = nothing
 function trap(node::Node, scope::Scope)
+    if isblocknode(node); return; end
     global firstline = (firstline == -1) ? node.loc.line : firstline
     line = node.loc.line - firstline + 1
 

@@ -181,7 +181,7 @@ function postprocess_env!(envs::Set{LocalEnv}, ex::SymNode)
     postprocess_env!(envs,envof(ex))
 end
 function postprocess_env!(envs::Set{LocalEnv}, ex::Ex)
-    if isa(ex, BlockNode); postprocess_env!(envs, envof(ex)); end
+    if isblocknode(ex); postprocess_env!(envs, envof(ex)); end
     for arg in argsof(ex); postprocess_env!(envs, arg);    end
 end
 

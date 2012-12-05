@@ -70,41 +70,41 @@ end
 instrument(c::Context, ex) = ex # todo: remove?
 instrument(c::Context, node::Node) = exof(node)
 function instrument(c::Context, ex::Ex)
-    expr(headof(ex), {instrument(c, arg) for arg in argsof(ex)})
-end
-function instrument(c::Context, ex::BlockNode)
-    if isa(envof(ex), LocalEnv) && is_expr(envof(ex).source, :type)
+    if isblocknode(ex)
+        if isa(envof(ex), LocalEnv) && is_expr(envof(ex).source, :type)
+            code = {}
+            for arg in argsof(ex)        
+                if is_emittable(arg);  push(code, instrument(c, arg));  end
+            end
+            return expr(:block, code)
+        end
+        
         code = {}
-        for arg in argsof(ex)        
-            if is_emittable(arg);  push(code, instrument(c, arg));  end
+        if !is(envof(ex), c.env)
+            syms, e = Set{Symbol}(), envof(ex)
+            while !is(e, c.env);  add_each(syms, e.defined); e = e.parent;  end
+            
+            name = gensym("scope")
+            push(code, code_scope(name, c.scope_ex, envof(ex), syms))
+            c = Context(c, envof(ex), name)
         end
-        return expr(:block, code)
-    end
-
-    code = {}
-    if !is(envof(ex), c.env)
-        syms, e = Set{Symbol}(), envof(ex)
-        while !is(e, c.env);  add_each(syms, e.defined); e = e.parent;  end
-
-        name = gensym("scope")
-        push(code, code_scope(name, c.scope_ex, envof(ex), syms))
-        c = Context(c, envof(ex), name)
-    end
-
-    if c.pred(ex)
-        push(code, :($(c.trap_ex)($(quot(ex)), $(c.scope_ex))) )
-    end
-    for arg in argsof(ex)
-        if !isa(arg, BlockNode) && c.pred(arg)
-            push(code, :($(c.trap_ex)($(quot(arg)), $(c.scope_ex))) )
-        end           
-        if is_emittable(arg)
-            push(code, instrument(c, arg))
+        
+        if c.pred(ex)
+            push(code, :($(c.trap_ex)($(quot(ex)), $(c.scope_ex))) )
         end
+        for arg in argsof(ex)
+            if !isblocknode(arg) && c.pred(arg)
+                push(code, :($(c.trap_ex)($(quot(arg)), $(c.scope_ex))) )
+            end           
+            if is_emittable(arg)
+                push(code, instrument(c, arg))
+            end
+        end
+        expr(:block, code)
+    else
+        expr(headof(ex), {instrument(c, arg) for arg in argsof(ex)})
     end
-    expr(:block, code)
 end
-
 
 # ---- graft ------------------------------------------------------------------
 # Rewrite an (analyzed) AST to work as if it were inside

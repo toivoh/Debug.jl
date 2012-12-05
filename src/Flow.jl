@@ -11,8 +11,7 @@ export continue!, singlestep!, stepover!, stepout!
 
 is_trap(::LocNode)          = false
 is_trap{T<:Trap}(::Node{T}) = true
-is_trap(node::BlockNode)    = true
-is_trap(node::Node)         = !(node.loc.ex === nothing)
+is_trap(node::Node)         = !(node.loc.ex === nothing) || isblocknode(node)
 is_trap(ex)                 = false
 
 instrument(trap_ex, ex) = Graft.instrument(is_trap, trap_ex, analyze(ex, true))
@@ -74,7 +73,7 @@ leave_frame(s::DBState, frame::Frame) = (s.cond = leave(s.cond, frame))
 function leave_frames(s::DBState, ::Nothing, ::Scope) 
     while !(isempty(s.stack));  leave_frame(s, pop(s.stack));  end
 end
-leave_frames(s::DBState, b::BlockNode, sc::Scope) = leave_frames(s,Frame(b,sc))
+leave_frames(s::DBState, b::Node, sc::Scope) = leave_frames(s,Frame(b,sc))
 function leave_frames(s::DBState,frame::Frame)
     while !isempty(s.stack) && s.stack[end] != frame
         top = pop(s.stack)
@@ -82,25 +81,25 @@ function leave_frames(s::DBState,frame::Frame)
     end
 end
 trap(s::DBState, ::BPNode, scope::Scope) = (singlestep!(s); false)
-function trap(s::DBState, node::BlockNode, scope::Scope)
-    if isa(scope, LocalScope)
-        leave_frames(s, parent_block(node), scope.parent)
-    end
-
-    frame = Frame(node, scope)
-    enter_frame(s, frame)
-    push(s.stack, frame)
-    false
-end
 function trap(s::DBState, node::Node, scope::Scope)
-    leave_frames(s, parentof(node), scope)
-    does_trap(s.cond)
+    if isblocknode(node)
+        if isa(scope, LocalScope)
+            leave_frames(s, parent_block(node), scope.parent)
+        end
+        
+        frame = Frame(node, scope)
+        enter_frame(s, frame)
+        push(s.stack, frame)
+        false
+    else
+        leave_frames(s, parentof(node), scope)
+        does_trap(s.cond)
+    end
 end
 
 parent_block(node) = blockof(parentof(node))
 
 blockof(::Nothing)       = nothing
-blockof(node::BlockNode) = node
-blockof(node::Node)      = blockof(parentof(node))
+blockof(node::Node) = isblocknode(node) ? node : blockof(parentof(node))
 
 end # module

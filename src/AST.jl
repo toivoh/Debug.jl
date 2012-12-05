@@ -17,6 +17,8 @@ export is_emittable
 export ExValue
 
 
+export isblocknode
+
 # ---- Env: analysis-time scope -----------------------------------------------
 
 abstract Env
@@ -124,5 +126,8 @@ valueof(node::Node) = node.value
 
 is_emittable(ex) = true
 
+
+isblocknode(::Any) = false
+isblocknode(::BlockNode) = true
 
 end # module

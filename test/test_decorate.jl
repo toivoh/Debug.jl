@@ -32,34 +32,36 @@ macro noenv()
     Node(NoEnv())
 end
 
-rebuild(node::Node) = exof(node)
 rebuild(node::Union(Node{BlockEnv},Node{NoEnv})) = node
-rebuild(ex::Ex) = expr(headof(ex), {rebuild(arg) for arg in argsof(ex)})
-function rebuild(block::BlockNode)
-    env = envof(block)
-    for arg in argsof(block)
-        if isa(arg, Node{BlockEnv})
-            benv = valueof(arg)
-            if !(env.defined == benv.defined)
-                error("env.defined = $(env.defined) != $(benv.defined)")
+function rebuild(node::Node)
+    if isblocknode(node)
+        env = envof(node)
+        for arg in argsof(node)
+            if isa(arg, Node{BlockEnv})
+                benv = valueof(arg)
+                if !(env.defined == benv.defined)
+                    error("env.defined = $(env.defined) != $(benv.defined)")
+                end
+                just_assigned = env.assigned - env.defined
+                if !(just_assigned == benv.assigned)
+                    error("just_assigned = $(just_assigned) != $(benv.assigned)")
+                end
+            elseif isa(arg, Node{NoEnv})
+                @assert isa(env, NoEnv)
             end
-            just_assigned = env.assigned - env.defined
-            if !(just_assigned == benv.assigned)
-                error("just_assigned = $(just_assigned) != $(benv.assigned)")
-            end
-        elseif isa(arg, Node{NoEnv})
-            @assert isa(env, NoEnv)
         end
+        expr(:block, {rebuild(arg) for arg in argsof(node)})
+    elseif isa(node, ExNode)
+        expr(headof(node), {rebuild(arg) for arg in argsof(node)})
+    else
+        exof(node)
     end
-    expr(:block, {rebuild(arg) for arg in argsof(block)})
 end
 
 function test_decorate(code)
     ecode = macroexpand(code)
     dcode = analyze(NoEnv(), ecode, false)
     rcode = rebuild(dcode)
-#     @show dcode
-#     @show rcode
     @assert rcode == ecode
 end
 macro test_decorate(ex)
