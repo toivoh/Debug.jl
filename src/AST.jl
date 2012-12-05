@@ -74,15 +74,14 @@ type Node{T}
 end
 Node{T}(value::T, args...) = Node{T}(value, args...)
 
-type ExValue{T}
-    format::T
+type ExValue
+    format::Symbol
     args::Vector{Node}
 
-    ExValue(format::T, args) = new(format, Node[args...])
+    ExValue(format::Symbol, args) = new(format, Node[args...])
 end
-ExValue{T}(format::T, args) = ExValue{T}(format, args)
 
-typealias ExNode Node{ExValue{Symbol}}
+typealias ExNode Node{ExValue}
 
 
 typealias Ex Union(Expr, ExNode)
