@@ -53,12 +53,16 @@ function wrap(states::Vector, args::Vector)
     {wrap(s, arg) for (s, arg) in zip(states, args)}
 end
 wrap(s::SimpleState, ex::SymbolNode) = wrap(s, ex.name)
-wrap(s::State, ex) = (v = decorate(s,ex); isa(v, Node) ? v : Leaf(v))
+wrap(s::State, ex) = enwrap(s, decorate(s,ex))
+
+enwrap(s::State, node::Node) = node
+enwrap(s::State, value::ExValue) = ExNode(value.format, value.args)
+enwrap(s::State, value) = Leaf(value)
 
 
-decorate(states::Vector,ex::Ex)=ExNode(headof(ex), wrap(states,argsof(ex)))
+decorate(states::Vector, ex::Ex) = ExValue(headof(ex), wrap(states,argsof(ex)))
 
-decorate(s::State,       ex)                 = isa(ex, Node) ? ex : PLeaf(ex)
+decorate(s::State,       ex)                 = isa(ex, Node) ? ex : Plain(ex)
 decorate(s::SimpleState, ex::LineNumberNode) = Loc(ex, ex.line)
 decorate(s::Def, ex::Symbol) = (add_defined( s.env,ex); Sym(ex,raw(s.env)))
 decorate(s::Lhs, ex::Symbol) = (add_assigned(s.env,ex); Sym(ex,raw(s.env)))
@@ -134,13 +138,13 @@ end
 
 function decorate(state::SimpleState, ex::Ex)
     head, args  = headof(ex), argsof(ex)
-    if head === :line;                     return LocNode(ex, args...)
-    elseif contains([:quote, :top], head); return PLeaf(ex)
+    if head === :line;                     return Loc(ex, args...)
+    elseif contains([:quote, :top], head); return Plain(ex)
     elseif head === :macrocall; return decorate(state, macroexpand(ex))
     end
 
     states = argstates(state, ex)
-    ExNode(head===:block ? Block(raw(state.env)) : head, wrap(states,args))
+    ExValue(head===:block ? Block(raw(state.env)) : head, wrap(states,args))
 end
 
 # ---- post-decoration processing ---------------------------------------------

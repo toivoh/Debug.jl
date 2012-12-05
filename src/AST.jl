@@ -9,11 +9,12 @@ import Base.has, Base.show
 
 export Env, LocalEnv, NoEnv, child, add_assigned, add_defined
 export LocNode, PLeaf, SymNode, BlockNode
-export Trap, Loc, Block, Sym
+export Trap, Loc, Block, Sym, Plain
 export headof, argsof, argof, nargsof
 export parentof, envof, exof, valueof
 export Ex, Node, ExNode, Leaf
 export is_emittable
+export ExValue
 
 
 # ---- Env: analysis-time scope -----------------------------------------------
@@ -75,6 +76,14 @@ function show(io::IO, ex::ExNode)
     show(io, ex.format); print(io, ", ")
     show(io, ex.args);   print(io, ")")
 end
+
+type ExValue{T}
+    format::T
+    args::Vector{Node}
+
+    ExValue(format::T, args) = new(format, Node[args...])
+end
+ExValue{T}(format::T, args) = ExValue{T}(format, args)
 
 typealias Ex Union(Expr, ExNode)
 
