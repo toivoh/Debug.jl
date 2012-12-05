@@ -151,7 +151,8 @@ function decorate(state::SimpleState, ex::Ex)
     end
 
     states = argstates(state, ex)
-    ExValue(head===:block ? Block(raw(state.env)) : head, wrap(states,args))
+#    ExValue(head===:block ? Block(raw(state.env)) : head, wrap(states,args))
+    ExValue(head, wrap(states,args))
 end
 
 # ---- post-decoration processing ---------------------------------------------

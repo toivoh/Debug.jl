@@ -8,8 +8,8 @@ using Base
 import Base.has, Base.show, Base.isequal
 
 export Env, LocalEnv, NoEnv, child, add_assigned, add_defined
-export LocNode, PLeaf, SymNode, BlockNode
-export Trap, Loc, Block, Sym, Plain
+export LocNode, PLeaf, SymNode
+export Trap, Loc, Sym, Plain
 export headof, argsof, argof, nargsof
 export parentof, envof, exof, valueof
 export Ex, Node, ExNode
@@ -82,10 +82,7 @@ type ExValue{T}
 end
 ExValue{T}(format::T, args) = ExValue{T}(format, args)
 
-type Block;  env::Env;  end
-
-typealias BlockNode Node{ExValue{Block}}
-typealias ExNode Union(Node{ExValue{Symbol}}, BlockNode)
+typealias ExNode Node{ExValue{Symbol}}
 
 
 typealias Ex Union(Expr, ExNode)
@@ -108,10 +105,9 @@ parentof(ex::Node) = ex.parent
 
 headof(ex::Expr)      = ex.head
 headof(ex::ExNode)    = valueof(ex).format
-headof(ex::BlockNode) = :block
 
 argsof(ex::Expr)                     = ex.args
-argsof(ex::Union(ExNode, BlockNode)) = valueof(ex).args
+argsof(ex::ExNode) = valueof(ex).args
 nargsof(ex)  = length(argsof(ex))
 argof(ex, k) = argsof(ex)[k]
 
@@ -127,6 +123,6 @@ is_emittable(ex) = true
 
 
 isblocknode(::Any) = false
-isblocknode(::BlockNode) = true
+isblocknode(node::ExNode) = (headof(node) === :block)
 
 end # module
