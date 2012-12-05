@@ -54,7 +54,7 @@ Loc(ex, line, file) = Loc(ex, line, string(file))
 Loc(ex, line)       = Loc(ex, line, "")
 
 
-if 0==1 ###################################################################
+if 1==1 ###################################################################
 
 type Node{T}
     value::T
@@ -122,7 +122,15 @@ is_emittable(ex) = true
 
 
 
-exnode(value::ExValue) = Node(value)
+#exnode(value::ExValue) = Node(value)
+function exnode(value::ExValue)
+    node = Node(value)
+    for arg in argsof(node)
+        set_parent(arg, node)
+    end
+    node
+end
+
 typealias Leaf{T} Node{T}
 
 leaf(value) = Node(value)

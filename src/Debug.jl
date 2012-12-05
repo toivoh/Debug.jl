@@ -15,7 +15,7 @@ using AST, Meta, Analysis, Graft, Eval, Flow, UI
 instrument(pred, trap_ex, ex) = Graft.instrument(pred, trap_ex, analyze(ex, true))
 
 is_trap(::Union(LocNode,BlockNode)) = false
-is_trap(node::Node)                 = isa(node.parent, BlockNode)
+is_trap(node::Node)                 = isa(parentof(node), BlockNode)
 
 macro debug(ex)
     code_debug(UI.instrument(ex))
