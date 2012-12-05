@@ -39,7 +39,7 @@ function rebuild(block::BlockNode)
     env = envof(block)
     for arg in argsof(block)
         if isa(arg, Leaf{BlockEnv})
-            benv = arg.format
+            benv = valueof(arg)
             if !(env.defined == benv.defined)
                 error("env.defined = $(env.defined) != $(benv.defined)")
             end

@@ -156,8 +156,8 @@ end
 
 ## set_source!(): propagate source file info ##
 function set_source!(ex::LocNode, locex, line, file)
-    ex.format.file = file
-    ex.loc = ex.format
+    valueof(ex).file = file
+    ex.loc = valueof(ex)
 end
 set_source!(ex::Node, locex, line, file) = (ex.loc = Loc(locex, line, file))
 function set_source!(ex::ExNode, locex, line, file)
@@ -165,8 +165,8 @@ function set_source!(ex::ExNode, locex, line, file)
     locex  = nothing
     for arg in argsof(ex)
         if isa(arg, LocNode) 
-            line = arg.format.line
-            if arg.format.file != "";  file = arg.format.file;  end
+            line = valueof(arg).line
+            if valueof(arg).file != "";  file = valueof(arg).file;  end
         end
         set_source!(arg, locex, line, file)
         locex = isa(arg, LocNode) ? exof(arg) : nothing
