@@ -1,7 +1,7 @@
 include(find_in_path("Debug.jl"))
 
 module TestTrap
-using Base, Debug, Debug.AST
+using Base, Debug
 
 firstline = -1
 function trap(node::Node, scope::Scope)

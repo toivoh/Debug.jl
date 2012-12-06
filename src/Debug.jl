@@ -1,7 +1,7 @@
 
 module Debug
 using Base
-export @debug, @instrument, @bp, debug_eval, Scope, Node, BlockNode, BPNode
+export @debug, @instrument, @bp, debug_eval, Scope, Node, isblocknode, BPNode
 
 include(find_in_path("Debug/src/AST.jl"))
 include(find_in_path("Debug/src/Meta.jl"))
