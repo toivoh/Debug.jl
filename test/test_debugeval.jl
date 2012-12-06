@@ -5,7 +5,6 @@ using Base, Debug
 
 firstline = -1
 function trap(node::Node, scope::Scope) 
-    if isblocknode(node); return; end
     global firstline = (firstline == -1) ? node.loc.line : firstline
     line = node.loc.line - firstline + 1
     print(line, ":")
