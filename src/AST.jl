@@ -9,7 +9,7 @@ import Base.has, Base.show, Base.isequal, Base.promote_rule
 
 export Env, LocalEnv, NoEnv, child, add_assigned, add_defined
 export State, SimpleState, Def, Lhs, Rhs
-export Trap, Plain, Loc, ExValue
+export Plain, Loc, ExValue
 export Node, ExNode, Ex, PLeaf, SymNode, LocNode
 export headof, argsof, argof, nargsof
 export is_emittable
@@ -54,10 +54,8 @@ type Rhs <: SimpleState;  env::Env;  end  # plain evaluation
 
 # ---- Extended AST nodes that can be produced by decorate() ------------------
 
-abstract Trap
-
-type Plain;   ex; end
-type Loc;     ex; line::Int; file::String;  end
+type Plain; ex; end
+type Loc;   ex; line::Int; file::String;  end
 Loc(ex, line, file) = Loc(ex, line, string(file))
 Loc(ex, line)       = Loc(ex, line, "")
 
@@ -81,6 +79,9 @@ type Node{T}
 end
 Node{T}(value::T, args...) = Node{T}(value, args...)
 
+isequal(x::Node, y::Node)  = isequal(x.value, y.value)
+show(io::IO, ex::Node) = (print(io,"Node("); show(io,ex.value); print(io,")"))
+
 type ExValue
     head::Symbol
     args::Vector{Node}
@@ -89,24 +90,19 @@ type ExValue
 end
 
 typealias ExNode Node{ExValue}
-
-
 typealias Ex Union(Expr, ExNode)
-
-isequal(x::Node, y::Node) = isequal(x.value, y.value)
-
 
 typealias PLeaf   Node{Plain}
 typealias SymNode Node{Symbol}
 typealias LocNode Node{Loc}
 
-show(io::IO, ex::Node) = (print(io,"Node("); show(io,ex.value); print(io,")"))
 
-headof(ex::Expr)      = ex.head
-headof(ex::ExNode)    = valueof(ex).head
+headof(ex::Expr)   = ex.head
+headof(ex::ExNode) = valueof(ex).head
 
-argsof(ex::Expr)                     = ex.args
+argsof(ex::Expr)   = ex.args
 argsof(ex::ExNode) = valueof(ex).args
+
 nargsof(ex)  = length(argsof(ex))
 argof(ex, k) = argsof(ex)[k]
 

@@ -9,20 +9,21 @@ import AST.is_emittable, Base.isequal
 export @bp, BPNode, DBState
 export continue!, singlestep!, stepover!, stepout!
 
-is_trap(::LocNode)          = false
-is_trap{T<:Trap}(::Node{T}) = true
-is_trap(node::Node)         = !(node.loc.ex === nothing) || isblocknode(node)
-is_trap(ex)                 = false
-
-instrument(trap_ex, ex) = Graft.instrument(is_trap, trap_ex, ex)
-
-type BreakPoint <: Trap; end
+type BreakPoint; end
 typealias BPNode Node{BreakPoint}
 is_emittable(::BPNode) = false
 
 macro bp()
     Node(BreakPoint())
 end
+
+
+is_trap(::LocNode)  = false
+is_trap(::BPNode)   = true
+is_trap(node::Node) = !(node.loc.ex === nothing) || isblocknode(node)
+is_trap(ex)         = false
+
+instrument(trap_ex, ex) = Graft.instrument(is_trap, trap_ex, ex)
 
 
 type Frame

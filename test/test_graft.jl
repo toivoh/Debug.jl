@@ -14,7 +14,7 @@ macro assert_fails(ex)
     end
 end
 
-type Graft <: Trap;  ex;  end
+type Graft; ex; end
 is_emittable(::Node{Graft}) = false
 
 trap(::Any, ::Scope) = nothing
