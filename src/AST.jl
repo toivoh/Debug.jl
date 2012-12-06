@@ -10,8 +10,7 @@ import Base.has, Base.show, Base.isequal, Base.promote_rule
 export Env, LocalEnv, NoEnv, child, add_assigned, add_defined
 export State, SimpleState, Def, Lhs, Rhs
 export Loc, Plain, ExValue, Location
-export Node, ExNode, Ex, PLeaf, SymNode, LocNode
-export headof, argsof, argof, nargsof
+export Node, ExNode, PLeaf, SymNode, LocNode
 export is_emittable, is_evaluable
 export parentof, valueof, envof, exof
 
@@ -66,7 +65,7 @@ type Node{T}
     
     function set_args_parent(node::Node)
         if T <: ExValue
-            for arg in argsof(node)
+            for arg in node.value.args
                 set_parent(arg, node)
             end            
         end
@@ -111,19 +110,6 @@ is_evaluable(ex) = is_emittable(ex)
 is_evaluable(::Node{Location}) = false
 is_evaluable(::LocNode) = false
 
-## Accessors that work on both Expr:s and ExNode:s ##
-
-typealias Ex Union(Expr, ExNode)
-
-headof(ex::Expr)   = ex.head
-headof(ex::ExNode) = valueof(ex).head
-
-argsof(ex::Expr)   = ex.args
-argsof(ex::ExNode) = valueof(ex).args
-
-nargsof(ex)  = length(argsof(ex))
-argof(ex, k) = argsof(ex)[k]
-
 ## Accessors for Node:s ##
 
 parentof(node::Node) = node.parent
@@ -133,7 +119,6 @@ envof(   node::Node) = node.state.env # will only work for SimpleState:s
 exof(node::SymNode) = valueof(node)
 exof(node::LocNode) = node.loc.ex
 exof(node::Node)    = exof(valueof(node))
-exof(node::Ex)      = error("Not applicable!")
 exof(value::Union(Plain, Loc)) = value.ex
 
 end # module
