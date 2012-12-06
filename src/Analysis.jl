@@ -5,7 +5,6 @@
 
 module Analysis
 using Base, AST, Meta
-import Base.promote_rule
 
 export analyze
 
@@ -33,14 +32,6 @@ const typed_comprehensions =   [typed_comprehension, typed_dict_comprehension]
 # ---- wrap(): add scoping info to AST ------------------------------------
 # Rewrites AST, exchanging Expr:s and leaves for Node:s.
 # Adds scope info, classifies nodes, etc.
-
-abstract State
-promote_rule{S<:State,T<:State}(::Type{S},::Type{T}) = State
-
-abstract SimpleState <: State
-type Def <: SimpleState;  env::Env;  end  # definition, e.g. inside local
-type Lhs <: SimpleState;  env::Env;  end  # e.g. to the left of =
-type Rhs <: SimpleState;  env::Env;  end  # plain evaluation
 
 # TypeEnv: Env used in a type block to throw away non-method definitions 
 type TypeEnv <: Env

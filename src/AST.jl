@@ -5,9 +5,10 @@
 
 module AST
 using Base
-import Base.has, Base.show, Base.isequal
+import Base.has, Base.show, Base.isequal, Base.promote_rule
 
 export Env, LocalEnv, NoEnv, child, add_assigned, add_defined
+export State, SimpleState, Def, Lhs, Rhs
 export LocNode, PLeaf, SymNode
 export Trap, Loc, Plain
 export headof, argsof, argof, nargsof
@@ -42,6 +43,17 @@ add_defined( env::LocalEnv, sym::Symbol) = add(env.defined,  sym)
 add_assigned(env::LocalEnv, sym::Symbol) = add(env.assigned, sym)
 
 
+# ---- State: Context for a Node ----------------------------------------------
+
+abstract State
+promote_rule{S<:State,T<:State}(::Type{S},::Type{T}) = State
+
+abstract SimpleState <: State
+type Def <: SimpleState;  env::Env;  end  # definition, e.g. inside local
+type Lhs <: SimpleState;  env::Env;  end  # e.g. to the left of =
+type Rhs <: SimpleState;  env::Env;  end  # plain evaluation
+
+
 # ---- Extended AST nodes that can be produced by decorate() ------------------
 
 abstract Trap
@@ -54,7 +66,7 @@ Loc(ex, line)       = Loc(ex, line, "")
 type Node{T}
     value::T
     parent::Union(Node, Nothing)
-    state
+    state::State
     loc::Loc
     
     function set_args_parent(node::Node)
