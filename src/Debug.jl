@@ -12,8 +12,6 @@ include(find_in_path("Debug/src/Flow.jl"))
 include(find_in_path("Debug/src/UI.jl"))
 using AST, Meta, Analysis, Graft, Eval, Flow, UI
 
-instrument(pred, trap_ex, ex) = Graft.instrument(pred, trap_ex, analyze(ex, true))
-
 is_trap(::LocNode) = false
 is_trap(node::Node) = isblocknode(parentof(node)) && !isblocknode(node)
 

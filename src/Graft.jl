@@ -5,10 +5,11 @@
 # were evaluated inside such code (grafting)
 
 module Graft
-using Base, AST, Meta
+using Base, AST, Meta, Analysis
 import Base.ref, Base.assign, Base.has
 
 export Scope, NoScope, LocalScope
+export instrument
 
 
 # ---- Scope: runtime symbol table with getters and setters -------------------
@@ -48,7 +49,7 @@ end
 Context(c::Context, env::Env, scp_ex) = Context(c.pred, c.trap_ex, env, scp_ex)
 
 function instrument(pred::Function, trap_ex, ex)
-    instrument(Context(pred, trap_ex, NoEnv(), quot(NoScope())), ex)
+    instrument(Context(pred,trap_ex,NoEnv(),quot(NoScope())),analyze(ex,true))
 end
 
 

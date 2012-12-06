@@ -14,7 +14,7 @@ is_trap{T<:Trap}(::Node{T}) = true
 is_trap(node::Node)         = !(node.loc.ex === nothing) || isblocknode(node)
 is_trap(ex)                 = false
 
-instrument(trap_ex, ex) = Graft.instrument(is_trap, trap_ex, analyze(ex, true))
+instrument(trap_ex, ex) = Graft.instrument(is_trap, trap_ex, ex)
 
 type BreakPoint <: Trap; end
 typealias BPNode Node{BreakPoint}
