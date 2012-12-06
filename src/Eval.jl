@@ -4,12 +4,8 @@
 # eval in debug scope
 
 module Eval
-using Base, AST, Analysis, Runtime, Graft
+using Base, AST, Runtime, Graft
 export debug_eval, Scope
-
-# tie together Analysis and Graft
-graft(env::Env, scope::Scope, ex) = Graft.graft(scope, analyze(env, ex, false))
-graft(scope::Scope, ex) =                 graft(child(NoEnv()), scope, ex)
 
 debug_eval(scope::NoScope, ex) = eval(ex)
 function debug_eval(scope::LocalScope, ex)

@@ -6,7 +6,7 @@
 
 module Graft
 using Base, AST, Meta, Analysis, Runtime
-export instrument
+export instrument, graft
 
 
 # ---- instrument -------------------------------------------------------------
@@ -40,7 +40,7 @@ function code_scope(scopesym::Symbol, parent, env::Env, syms)
     ))
 end
 
-instrument(c::Context, ex) = ex # todo: remove?
+#instrument(c::Context, ex) = ex # todo: remove?
 instrument(c::Context, node::Node) = exof(node)
 function instrument(c::Context, ex::Ex)
     if isblocknode(ex)
@@ -91,18 +91,22 @@ const updating_ops = {
  :%= => :%,   :|= => :|,  :&= => :&,  :$= => :$,  :<<= => :<<,  :>>= => :>>,
  :>>>= => :>>>}
 
-graft(s::LocalScope, ex)         = ex
-graft(s::LocalScope, node::Node) = exof(node)
-function graft(s::LocalScope, ex::SymNode)
+graft(env::Env, scope::Scope, ex) = rawgraft(scope, analyze(env, ex, false))
+graft(scope::Scope, ex) =           graft(child(NoEnv()), scope, ex)
+
+
+rawgraft(s::LocalScope, ex)         = ex
+rawgraft(s::LocalScope, node::Node) = exof(node)
+function rawgraft(s::LocalScope, ex::SymNode)
     sym = exof(ex)
     (has(s,sym) && !has(envof(ex),sym)) ? expr(:call,quot(getter(s,sym))) : sym
 end
-function graft(s::LocalScope, ex::Ex)
+function rawgraft(s::LocalScope, ex::Ex)
     head, args = headof(ex), argsof(ex)
     if head == :(=)
         lhs, rhs = args
         if isa(lhs, SymNode)             # assignment to symbol
-            rhs = graft(s, rhs)
+            rhs = rawgraft(s, rhs)
             sym = exof(lhs)
             if has(envof(lhs), sym) || !has(s.env.assigned, sym); return :($sym = $rhs)
             elseif has(s, sym);   return expr(:call, quot(setter(s,sym)), rhs)
@@ -110,7 +114,7 @@ function graft(s::LocalScope, ex::Ex)
             end
         elseif is_expr(lhs, :tuple)  # assignment to tuple
             tup = Node(Plain(gensym("tuple"))) # don't recurse into tup
-            return graft(s, expr(:block,
+            return rawgraft(s, expr(:block,
                  :($tup  = $rhs    ),
                 {:($dest = $tup[$k]) for (k,dest)=enumerate(argsof(lhs))}...))
         elseif is_expr(lhs, [:ref, :.]) || isa(lhs, PLeaf)# need no lhs rewrite
@@ -119,9 +123,9 @@ function graft(s::LocalScope, ex::Ex)
     elseif has(updating_ops, head) && isa(args[1], SymNode)
         # x+=y ==> x=x+y etc.
         op = updating_ops[head]
-        return graft(s, :( $(args[1]) = ($op)($(args[1]), $(args[2])) ))
+        return rawgraft(s, :( $(args[1]) = ($op)($(args[1]), $(args[2])) ))
     end        
-    expr(head, {graft(s,arg) for arg in args})
+    expr(head, {rawgraft(s,arg) for arg in args})
 end
 
 end # module
