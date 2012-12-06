@@ -9,13 +9,11 @@ import Base.has, Base.show, Base.isequal, Base.promote_rule
 
 export Env, LocalEnv, NoEnv, child, add_assigned, add_defined
 export State, SimpleState, Def, Lhs, Rhs
-export LocNode, PLeaf, SymNode
-export Trap, Loc, Plain
+export Trap, Plain, Loc, ExValue
+export Node, ExNode, Ex, PLeaf, SymNode, LocNode
 export headof, argsof, argof, nargsof
-export parentof, envof, exof, valueof
-export Ex, Node, ExNode
 export is_emittable
-export ExValue
+export parentof, valueof, envof, exof
 
 
 # ---- Env: analysis-time scope -----------------------------------------------
@@ -104,13 +102,6 @@ typealias LocNode Node{Loc}
 
 show(io::IO, ex::Node) = (print(io,"Node("); show(io,ex.value); print(io,")"))
 
-function set_parent(ex::Node, parent::Node)
-    if parentof(ex) === nothing; ex.parent = parent
-    else; error("$ex already has a parent!")
-    end
-end
-parentof(ex::Node) = ex.parent
-
 headof(ex::Expr)      = ex.head
 headof(ex::ExNode)    = valueof(ex).head
 
@@ -119,16 +110,22 @@ argsof(ex::ExNode) = valueof(ex).args
 nargsof(ex)  = length(argsof(ex))
 argof(ex, k) = argsof(ex)[k]
 
-envof(node::Node) = node.state.env # will only work for SimpleState:s
-
-exof(node::Node) = exof(valueof(node))
-exof(node::SymNode) = valueof(node)
-exof(node::Ex)   = error("Not applicable!")
-exof(value::Union(Plain, Loc)) = value.ex
-
-valueof(node::Node) = node.value
-
 is_emittable(ex) = true
 
+
+function set_parent(ex::Node, parent::Node)
+    if parentof(ex) === nothing; ex.parent = parent
+    else; error("$ex already has a parent!")
+    end
+end
+
+parentof(node::Node) = node.parent
+valueof( node::Node) = node.value
+envof(   node::Node) = node.state.env # will only work for SimpleState:s
+
+exof(node::Node)    = exof(valueof(node))
+exof(node::SymNode) = valueof(node)
+exof(node::Ex)      = error("Not applicable!")
+exof(value::Union(Plain, Loc)) = value.ex
 
 end # module
