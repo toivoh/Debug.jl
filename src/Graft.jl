@@ -40,32 +40,31 @@ function code_scope(scopesym::Symbol, parent, env::Env, syms)
     ))
 end
 
-#instrument(c::Context, ex) = ex # todo: remove?
 instrument(c::Context, node::Node) = exof(node)
-function instrument(c::Context, ex::Ex)
-    if isblocknode(ex)
-        if isa(envof(ex), LocalEnv) && is_expr(envof(ex).source, :type)
+function instrument(c::Context, node::ExNode)
+    if isblocknode(node)
+        if isa(envof(node), LocalEnv) && is_expr(envof(node).source, :type)
             code = {}
-            for arg in argsof(ex)        
+            for arg in argsof(node)        
                 if is_emittable(arg);  push(code, instrument(c, arg));  end
             end
             return expr(:block, code)
         end
         
         code = {}
-        if !is(envof(ex), c.env)
-            syms, e = Set{Symbol}(), envof(ex)
+        if !is(envof(node), c.env)
+            syms, e = Set{Symbol}(), envof(node)
             while !is(e, c.env);  add_each(syms, e.defined); e = e.parent;  end
             
             name = gensym("scope")
-            push(code, code_scope(name, c.scope_ex, envof(ex), syms))
-            c = Context(c, envof(ex), name)
+            push(code, code_scope(name, c.scope_ex, envof(node), syms))
+            c = Context(c, envof(node), name)
         end
         
-        if c.pred(ex)
-            push(code, :($(c.trap_ex)($(quot(ex)), $(c.scope_ex))) )
+        if c.pred(node)
+            push(code, :($(c.trap_ex)($(quot(node)), $(c.scope_ex))) )
         end
-        for arg in argsof(ex)
+        for arg in argsof(node)
             if !isblocknode(arg) && c.pred(arg)
                 push(code, :($(c.trap_ex)($(quot(arg)), $(c.scope_ex))) )
             end           
@@ -75,7 +74,19 @@ function instrument(c::Context, ex::Ex)
         end
         expr(:block, code)
     else
-        expr(headof(ex), {instrument(c, arg) for arg in argsof(ex)})
+        expr(headof(node), {trap_instrument(c, arg) for arg in argsof(node)})
+    end
+end
+
+function trap_instrument(c::Context, node::Node)
+    ex = instrument(c, node)
+    if isa(node.state, Rhs) && c.pred(node)
+        quote
+            $(c.trap_ex)($(quot(node)), $(c.scope_ex))
+            $ex
+        end
+    else
+        ex
     end
 end
 
