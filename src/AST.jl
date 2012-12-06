@@ -52,9 +52,8 @@ type Lhs <: SimpleState;  env::Env;  end  # e.g. to the left of =
 type Rhs <: SimpleState;  env::Env;  end  # plain evaluation
 
 
-# ---- Extended AST nodes that can be produced by decorate() ------------------
+# ---- Node: decorated AST node format ----------------------------------------
 
-type Plain; ex; end
 type Loc;   ex; line::Int; file::String;  end
 Loc(ex, line, file) = Loc(ex, line, string(file))
 Loc(ex, line)       = Loc(ex, line, "")
@@ -82,6 +81,15 @@ Node{T}(value::T, args...) = Node{T}(value, args...)
 isequal(x::Node, y::Node)  = isequal(x.value, y.value)
 show(io::IO, ex::Node) = (print(io,"Node("); show(io,ex.value); print(io,")"))
 
+function set_parent(ex::Node, parent::Node)
+    if parentof(ex) === nothing; ex.parent = parent
+    else; error("$ex already has a parent!")
+    end
+end
+
+## Types for Node.value ##
+
+type Plain; ex; end
 type ExValue
     head::Symbol
     args::Vector{Node}
@@ -89,13 +97,17 @@ type ExValue
     ExValue(head::Symbol, args) = new(head, Node[args...])
 end
 
-typealias ExNode Node{ExValue}
-typealias Ex Union(Expr, ExNode)
-
+typealias ExNode  Node{ExValue}
 typealias PLeaf   Node{Plain}
 typealias SymNode Node{Symbol}
 typealias LocNode Node{Loc}
 
+# override for node types that should not be emitted
+is_emittable(ex) = true
+
+## Accessors that work on both Expr:s and ExNode:s ##
+
+typealias Ex Union(Expr, ExNode)
 
 headof(ex::Expr)   = ex.head
 headof(ex::ExNode) = valueof(ex).head
@@ -106,14 +118,7 @@ argsof(ex::ExNode) = valueof(ex).args
 nargsof(ex)  = length(argsof(ex))
 argof(ex, k) = argsof(ex)[k]
 
-is_emittable(ex) = true
-
-
-function set_parent(ex::Node, parent::Node)
-    if parentof(ex) === nothing; ex.parent = parent
-    else; error("$ex already has a parent!")
-    end
-end
+## Accessors for Node:s ##
 
 parentof(node::Node) = node.parent
 valueof( node::Node) = node.value
