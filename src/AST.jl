@@ -7,7 +7,7 @@ module AST
 using Base
 import Base.has, Base.show, Base.isequal, Base.promote_rule
 
-export Env, LocalEnv, NoEnv, child, add_assigned, add_defined
+export Env, LocalEnv, NoEnv, child
 export State, SimpleState, Def, Lhs, Rhs
 export Loc, Plain, ExValue, Location
 export Node, ExNode, PLeaf, SymNode, LocNode

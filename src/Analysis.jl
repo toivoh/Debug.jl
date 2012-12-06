@@ -50,22 +50,6 @@ end
 wrap(s::SimpleState, ex::SymbolNode) = wrap(s, ex.name)
 wrap(s::State, ex) = enwrap(s, decorate(s,ex))
 
-enwrap(s::State, value)    = Node(value, raw(s))
-enwrap(s::State, loc::Loc) = Node(Location(), raw(s), loc)
-
-decorate(states::Vector, ex::Ex) = ExValue(headof(ex), wrap(states,argsof(ex)))
-
-function decorate(s::State, ex)
-    if isa(ex, Node); valueof(ex)
-    else              Plain(ex)
-    end
-end
-
-decorate(s::SimpleState, ex::LineNumberNode) = Loc(ex, ex.line)
-decorate(s::Def, ex::Symbol) = (add_defined( s.env,ex); ex)
-decorate(s::Lhs, ex::Symbol) = (add_assigned(s.env,ex); ex)
-decorate(s::SimpleState, ex::Symbol) = ex
-
 # SplitDef: Def with different scopes for left and right side, e.g.
 # let x_inner = y_outer   or   type T_outer{S_inner} <: Q_outer
 type SplitDef <: State;
@@ -81,6 +65,21 @@ function wrap(s::SplitDef, ex::Ex)
     else                    wrap(Def(s.ls), ex)
     end
 end
+
+enwrap(s::State, value)    = Node(value, raw(s))
+enwrap(s::State, loc::Loc) = Node(Location(), raw(s), loc)
+
+
+## decorate: does most of the work for wrap ##
+
+decorate(states::Vector, ex::Ex) = ExValue(headof(ex), wrap(states,argsof(ex)))
+
+decorate(s::State, ex) = isa(ex, Node) ? valueof(ex) : Plain(ex) # wrap/unwrap
+decorate(s::SimpleState, ex::LineNumberNode) = Loc(ex, ex.line)
+
+decorate(s::Def,         ex::Symbol) = (AST.add_defined( s.env, ex); ex)
+decorate(s::Lhs,         ex::Symbol) = (AST.add_assigned(s.env, ex); ex)
+decorate(s::SimpleState, ex::Symbol) = ex
 
 # Sig: (part of) function signature in function f(x) ... / f(x) = ...
 type Sig <: State; 
@@ -141,9 +140,7 @@ function decorate(state::SimpleState, ex::Ex)
     elseif head === :macrocall; return decorate(state, macroexpand(ex))
     end
 
-    states = argstates(state, ex)
-#    ExValue(head===:block ? Block(raw(state.env)) : head, wrap(states,args))
-    ExValue(head, wrap(states,args))
+    decorate(argstates(state, ex), ex)
 end
 
 # ---- post-decoration processing ---------------------------------------------
