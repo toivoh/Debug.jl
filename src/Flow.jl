@@ -4,7 +4,7 @@
 # Interactive debug trap
 
 module Flow
-using Base, Meta, AST, Analysis, Graft, Eval
+using Base, Meta, AST, Analysis, Runtime, Graft, Eval
 import AST.is_emittable, Base.isequal
 export @bp, BPNode, DBState
 export continue!, singlestep!, stepover!, stepout!

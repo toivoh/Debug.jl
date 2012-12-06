@@ -6,6 +6,7 @@ export @debug, @instrument, @bp, debug_eval, Scope, Node, isblocknode, BPNode
 include(find_in_path("Debug/src/AST.jl"))
 include(find_in_path("Debug/src/Meta.jl"))
 include(find_in_path("Debug/src/Analysis.jl"))
+include(find_in_path("Debug/src/Runtime.jl"))
 include(find_in_path("Debug/src/Graft.jl"))
 include(find_in_path("Debug/src/Eval.jl"))
 include(find_in_path("Debug/src/Flow.jl"))

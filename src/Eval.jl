@@ -4,7 +4,7 @@
 # eval in debug scope
 
 module Eval
-using Base, AST, Analysis, Graft
+using Base, AST, Analysis, Runtime, Graft
 export debug_eval, Scope
 
 # tie together Analysis and Graft
