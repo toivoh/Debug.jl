@@ -50,8 +50,8 @@ end
 wrap(s::SimpleState, ex::SymbolNode) = wrap(s, ex.name)
 wrap(s::State, ex) = enwrap(s, decorate(s,ex))
 
-enwrap(s::State, value) = Node(value, raw(s))
-
+enwrap(s::State, value)    = Node(value, raw(s))
+enwrap(s::State, loc::Loc) = Node(Location(), raw(s), loc)
 
 decorate(states::Vector, ex::Ex) = ExValue(headof(ex), wrap(states,argsof(ex)))
 
@@ -150,8 +150,7 @@ end
 
 ## set_source!(): propagate source file info ##
 function set_source!(ex::LocNode, locex, line, file)
-    valueof(ex).file = file
-    ex.loc = valueof(ex)
+    ex.loc.file = file
 end
 set_source!(ex::Node, locex, line, file) = (ex.loc = Loc(locex, line, file))
 function set_source!(ex::ExNode, locex, line, file)
@@ -159,11 +158,11 @@ function set_source!(ex::ExNode, locex, line, file)
     locex  = nothing
     for arg in argsof(ex)
         if isa(arg, LocNode) 
-            line = valueof(arg).line
-            if valueof(arg).file != "";  file = valueof(arg).file;  end
+            line = arg.loc.line #valueof(arg).line
+            if arg.loc.file != "";  file = arg.loc.file;  end
         end
         set_source!(arg, locex, line, file)
-        locex = isa(arg, LocNode) ? exof(arg) : nothing
+        locex = isa(arg, LocNode) ? arg.loc : nothing
     end
 end
 

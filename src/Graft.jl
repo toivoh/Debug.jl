@@ -38,7 +38,6 @@ assign(scope::LocalScope, x,  sym::Symbol) = setter(scope, sym)(x)
 
 # ---- instrument -------------------------------------------------------------
 # Add Scope creation and debug traps to (analyzed) code
-# A call to trap() is added after every AST.LocNode (expr(:line) / LineNumberNode)
 
 type Context
     pred::Function

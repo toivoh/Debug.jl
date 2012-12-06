@@ -9,10 +9,10 @@ import Base.has, Base.show, Base.isequal, Base.promote_rule
 
 export Env, LocalEnv, NoEnv, child, add_assigned, add_defined
 export State, SimpleState, Def, Lhs, Rhs
-export Plain, Loc, ExValue
+export Loc, Plain, ExValue, Location
 export Node, ExNode, Ex, PLeaf, SymNode, LocNode
 export headof, argsof, argof, nargsof
-export is_emittable
+export is_emittable, is_evaluable
 export parentof, valueof, envof, exof
 
 
@@ -73,8 +73,9 @@ type Node{T}
         node
     end
 
-    Node(value::T)        = set_args_parent(new(value, nothing))
-    Node(value::T, state) = set_args_parent(new(value, nothing, state))
+    Node(value::T)                 = set_args_parent(new(value, nothing))
+    Node(value::T, s::State)       = set_args_parent(new(value, nothing, s))
+    Node(value::T,s::State,l::Loc) = set_args_parent(new(value, nothing, s, l))
 end
 Node{T}(value::T, args...) = Node{T}(value, args...)
 
@@ -90,6 +91,7 @@ end
 ## Types for Node.value ##
 
 type Plain; ex; end
+type Location;  end
 type ExValue
     head::Symbol
     args::Vector{Node}
@@ -100,10 +102,14 @@ end
 typealias ExNode  Node{ExValue}
 typealias PLeaf   Node{Plain}
 typealias SymNode Node{Symbol}
-typealias LocNode Node{Loc}
+typealias LocNode Node{Location}
 
 # override for node types that should not be emitted
 is_emittable(ex) = true
+
+is_evaluable(ex) = is_emittable(ex)
+is_evaluable(::Node{Location}) = false
+is_evaluable(::LocNode) = false
 
 ## Accessors that work on both Expr:s and ExNode:s ##
 
@@ -124,8 +130,9 @@ parentof(node::Node) = node.parent
 valueof( node::Node) = node.value
 envof(   node::Node) = node.state.env # will only work for SimpleState:s
 
-exof(node::Node)    = exof(valueof(node))
 exof(node::SymNode) = valueof(node)
+exof(node::LocNode) = node.loc.ex
+exof(node::Node)    = exof(valueof(node))
 exof(node::Ex)      = error("Not applicable!")
 exof(value::Union(Plain, Loc)) = value.ex
 

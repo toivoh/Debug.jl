@@ -18,9 +18,8 @@ macro bp()
 end
 
 
-is_trap(::LocNode)  = false
 is_trap(::BPNode)   = true
-is_trap(node::Node) = !(node.loc.ex === nothing) || isblocknode(node)
+is_trap(node::Node) = is_evaluable(node) && (!(node.loc.ex === nothing) || isblocknode(node))
 is_trap(ex)         = false
 
 instrument(trap_ex, ex) = Graft.instrument(is_trap, trap_ex, ex)
