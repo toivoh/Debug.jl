@@ -26,14 +26,6 @@ is_trap(node::Node) = is_evaluable(node) && isblocknode(parentof(node))
 instrument(trap_ex, ex) = Graft.instrument(is_trap, trap_ex, ex)
 
 
-## Frame ##
-type Frame
-    node::Node
-    scope::Scope
-end
-isequal(f1::Frame, f2::Frame) = (f1.node === f2.node && f1.scope === f2.scope)
-
-
 ## Cond ##
 abstract Cond
 
@@ -67,19 +59,8 @@ continue!(  s::DBState) = (s.cond = Continue())
 singlestep!(s::DBState) = (s.cond = SingleStep())
 stepover!(  s::DBState) = (s.cond = StepOver())
 function stepout!(st::DBState, node::Node, s::Scope)
-    st.cond = ContinueInside(enclosing_frame(Frame(node, s)), SingleStep())
+    st.cond = ContinueInside(enclosing_scope_frame(Frame(node,s)),SingleStep())
 end
-
-function parent_frame(f::Frame)
-    @assert !is_function(f.node)
-    node = parentof(f.node)
-    Frame(node, introduces_scope(node) ? f.scope.parent : f.scope)
-end
-
-enclosing_frame(f::Frame) = sc_frameof(parent_frame(f))
-
-sc_frameof(f::Frame) = is_scope_node(f.node) ? f : parent_frame(f)
-
 
 trap(state::DBState,::BPNode,s::Scope) = (singlestep!(state); false)
 function trap(state::DBState, e::Enter, s::Scope)
