@@ -6,7 +6,7 @@ using Base, Debug, Debug.Flow
 state = DBState()
 ip    = 1
 
-function trap(node::Node, scope::Scope)
+function trap(node, scope::Scope)
     global firstline, ip
     if isa(node, BPNode);  firstline = node.loc.line;  end
     if !Flow.trap(state, node, scope); return; end
@@ -17,7 +17,9 @@ function trap(node::Node, scope::Scope)
     l, f = instructions[ip]
     ip += 1
     @assert line == l
-    f(state)
+    if f === stepout!; stepout!(state, node, scope)
+    else               f(state)
+    end
 end
 
 macro test_step(ex)
