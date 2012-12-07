@@ -57,7 +57,7 @@ seq(exs...) = expr(:block, exs...)
 function instrument(c::Context, node::Node)
     if isa(node.state, Rhs) && !is_in_type(node)
         code = {}
-        if c.trap_pred(node);  push(code, code_trap(c, node));       end
+        if c.trap_pred(node);  push(code, code_trap(c, node)); end
         if is_emittable(node); push(code, instrument_args(c, node)); 
         else                   push(code, quot(nothing))
         end
