@@ -76,7 +76,7 @@ end
         @syms x [y]
         y = 0
         while x > 0
-            @syms
+            @syms [x y]
             x -= y
             y += 1
         end
@@ -113,7 +113,7 @@ end
 @test_decorate let
     @syms
     let
-        @syms d1 d2 d3 d4 d5 [a1 a2 a3 a4]
+        @syms d1 d2 d3 d4 d5 [a1 a2 a3 a4 a5]
         # define
         global d1, d2=3, d3::Int, d4::String = "foo"
         local d5::Float64 = 3    
@@ -121,10 +121,10 @@ end
         a1 = 5
         a2, a3::Integer = 6, 7
         a4::Int = 23
+        a5 += 2
         # neither
         y
         v[i] = x
-        z += 2
     end
 end
 
