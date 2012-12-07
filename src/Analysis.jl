@@ -96,6 +96,12 @@ function decorate(s::Sig, ex::Ex)
     decorate(states, ex)
 end
 
+const updating_ops = {
+ :+= => :+,   :-= => :-,  :*= => :*,  :/= => :/,  ://= => ://, :.//= => :.//,
+:.*= => :.*, :./= => :./, :\= => :\, :.\= => :.\,  :^= => :^,   :.^= => :.^,
+ :%= => :%,   :|= => :|,  :&= => :&,  :$= => :$,  :<<= => :<<,  :>>= => :>>,
+ :>>>= => :>>>}
+
 # return a Vector of visit states for each arg of an expr(head, args)
 function argstates(state::SimpleState, ex)
     head, args = headof(ex), argsof(ex)
@@ -116,6 +122,7 @@ function argstates(state::SimpleState, ex)
     elseif contains(typed_comprehensions, head); c = child(ex, e)
         [Rhs(e), Rhs(c), fill(SplitDef(c,e), nargs-2)]
         
+    elseif has(updating_ops, head); [Lhs(e), Rhs(e)]
     elseif head === :(=);   [(isa(state,Def) ? state : Lhs(e)), Rhs(e)]
     elseif head === :(<:);  [(isa(state,Def) ? state : Rhs(e)), Rhs(e)]
     elseif head === :tuple; fill(state,  nargs)

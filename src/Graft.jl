@@ -45,6 +45,15 @@ end
 code_trap(c::Context, node) = expr(:call, c.trap_ex, quot(node), c.scope_ex)
 code_trap_if(c::Context,node) = c.trap_pred(node) ? code_trap(c,node) : nothing
 
+function instrument(c::Context, node::Node)
+    if isa(node.state, Rhs) && !is_in_type(node) && c.trap_pred(node)
+        expr(:block, code_trap(c, node), 
+             is_emittable(node) ? instrument_node(c, node) : quot(nothing))
+    else
+        instrument_node(c, node)
+    end
+end
+
 const frame_heads = Set(:while, :try, :for, :let, Analysis.comprehensions...)
 
 code_enterleave(::Nothing, ex, ::Nothing) = ex
@@ -52,8 +61,8 @@ code_enterleave(enter,     ex, ::Nothing) = quote; $enter; $ex; end
 code_enterleave(::Nothing, ex, leave) = :(try         $ex; finally $leave; end)
 code_enterleave(enter,     ex, leave) = :(try $enter; $ex; finally $leave; end)
 
-function instrument(c::Context, node::Node)
-    ex = instrument_node(c, node)
+function instrument_node(c::Context, node::Node)
+    ex = instrument_args(c, node)
     if is_function(node) || is_expr(node, frame_heads)
         enter, leave = code_trap_if(c,Enter(node)), code_trap_if(c,Leave(node))
         if is_function(node)
@@ -64,22 +73,6 @@ function instrument(c::Context, node::Node)
         end
     else
         ex
-    end
-end
-
-seq(ex)     = ex
-seq(exs...) = expr(:block, exs...)
-
-function instrument_node(c::Context, node::Node)
-    if isa(node.state, Rhs) && !is_in_type(node)
-        code = {}
-        if c.trap_pred(node);  push(code, code_trap(c, node)); end
-        if is_emittable(node); push(code, instrument_args(c, node)); 
-        else                   push(code, quot(nothing))
-        end
-        seq(code...)
-    else
-        instrument_args(c, node)
     end
 end
 
@@ -110,12 +103,6 @@ end
 # Replaces reads and writes to variables from that scope 
 # with getter/setter calls.
 
-const updating_ops = {
- :+= => :+,   :-= => :-,  :*= => :*,  :/= => :/,  ://= => ://, :.//= => :.//,
-:.*= => :.*, :./= => :./, :\= => :\, :.\= => :.\,  :^= => :^,   :.^= => :.^,
- :%= => :%,   :|= => :|,  :&= => :&,  :$= => :$,  :<<= => :<<,  :>>= => :>>,
- :>>>= => :>>>}
-
 graft(env::Env, scope::Scope, ex) = rawgraft(scope, analyze(env, ex, false))
 graft(scope::Scope, ex) =           graft(child(NoEnv()), scope, ex)
 
@@ -145,9 +132,9 @@ function rawgraft(s::LocalScope, ex::Ex)
         elseif is_expr(lhs, [:ref, :.]) || isa(lhs, PLeaf)# need no lhs rewrite
         else error("graft: not implemented: $ex")       
         end  
-    elseif has(updating_ops, head) && isa(args[1], SymNode)
+    elseif has(Analysis.updating_ops, head) && isa(args[1], SymNode)
         # x+=y ==> x=x+y etc.
-        op = updating_ops[head]
+        op = Analysis.updating_ops[head]
         return rawgraft(s, :( $(args[1]) = ($op)($(args[1]), $(args[2])) ))
     end        
     expr(head, {rawgraft(s,arg) for arg in args})
