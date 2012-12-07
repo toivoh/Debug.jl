@@ -13,15 +13,16 @@ export instrument, graft
 # Add Scope creation and debug traps to (analyzed) code
 
 type Context
-    pred::Function
+    trap_pred::Function
     trap_ex
     env::Env
     scope_ex
 end
-Context(c::Context, env::Env, scp_ex) = Context(c.pred, c.trap_ex, env, scp_ex)
+Context(c::Context,e::Env,scope_ex) = Context(c.trap_pred,c.trap_ex,e,scope_ex)
 
-function instrument(pred::Function, trap_ex, ex)
-    instrument(Context(pred,trap_ex,NoEnv(),quot(NoScope())),analyze(ex,true))
+function instrument(trap_pred::Function, trap_ex, ex)
+    instrument(Context(trap_pred, trap_ex, NoEnv(), quot(NoScope())),
+               analyze(ex,true))
 end
 
 
@@ -40,55 +41,50 @@ function code_scope(scopesym::Symbol, parent, env::Env, syms)
     ))
 end
 
-instrument(c::Context, node::Node) = exof(node)
-function instrument(c::Context, node::ExNode)
-    if isblocknode(node)
-        if isa(envof(node), LocalEnv) && is_expr(envof(node).source, :type)
-            code = {}
-            for arg in argsof(node)        
-                if is_emittable(arg);  push(code, instrument(c, arg));  end
-            end
-            return expr(:block, code)
-        end
-        
+is_in_type(::Nothing) = false
+function is_in_type(node::Node)
+    if isa(node.state, Rhs)
+        isa(envof(node), LocalEnv) && is_expr(envof(node).source, :type)
+    else
+        is_in_type(parentof(node))
+    end
+end
+
+code_trap(c::Context, node::Node) = expr(:call,c.trap_ex,quot(node),c.scope_ex)
+seq(ex)     = ex
+seq(exs...) = expr(:block, exs...)
+
+function instrument(c::Context, node::Node)
+    if isa(node.state, Rhs) && !is_in_type(node)
         code = {}
+        if c.trap_pred(node);  push(code, code_trap(c, node));       end
+        if is_emittable(node); push(code, instrument_args(c, node)); 
+        else                   push(code, quot(nothing))
+        end
+        seq(code...)
+    else
+        instrument_args(c, node)
+    end
+end
+
+instrument_args(c::Context, node::Node) = exof(node)
+function instrument_args(c::Context, node::ExNode)
+    args = {}
+    if isblocknode(node)
         if !is(envof(node), c.env)
+            # create new Scope
             syms, e = Set{Symbol}(), envof(node)
             while !is(e, c.env);  add_each(syms, e.defined); e = e.parent;  end
             
             name = gensym("scope")
-            push(code, code_scope(name, c.scope_ex, envof(node), syms))
+            push(args, code_scope(name, c.scope_ex, envof(node), syms))
             c = Context(c, envof(node), name)
         end
-        
-        if c.pred(node)
-            push(code, :($(c.trap_ex)($(quot(node)), $(c.scope_ex))) )
-        end
-        for arg in argsof(node)
-            if !isblocknode(arg) && c.pred(arg)
-                push(code, :($(c.trap_ex)($(quot(arg)), $(c.scope_ex))) )
-            end           
-            if is_emittable(arg)
-                push(code, instrument(c, arg))
-            end
-        end
-        expr(:block, code)
-    else
-        expr(headof(node), {trap_instrument(c, arg) for arg in argsof(node)})
     end
+    for arg in argsof(node); push(args, instrument(c, arg)); end
+    expr(headof(node), args)        
 end
 
-function trap_instrument(c::Context, node::Node)
-    ex = instrument(c, node)
-    if isa(node.state, Rhs) && c.pred(node)
-        quote
-            $(c.trap_ex)($(quot(node)), $(c.scope_ex))
-            $ex
-        end
-    else
-        ex
-    end
-end
 
 # ---- graft ------------------------------------------------------------------
 # Rewrite an (analyzed) AST to work as if it were inside
