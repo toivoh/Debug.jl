@@ -5,19 +5,28 @@ module TestTrap
 import Debug
 using Base, Debug, Debug.AST, Debug.Meta
 
-is_trap(node)    = false
-is_trap(::Event) = true
+is_trap(::Node) = false
+is_trap(node::ExNode) = isblocknode(parentof(node))
+is_trap(::Union(Event)) = true
 
 ip = 1
 
 function trap(e::Event, s::Scope)
     global ip
+#    println(typeof(e), headof(e.node))
     @assert isa(e, answers[ip][1])
     @assert answers[ip][2] === headof(e.node)
     ip += 1
 end
+function trap(node::ExNode, s::Scope)
+    global ip
+#    println(headof(node))
+    @assert answers[ip] == headof(node)
+    ip += 1    
+end
 function output(x)
     global ip
+#    println(x)
     @assert answers[ip] == x
     ip += 1
 end
@@ -28,13 +37,19 @@ macro test_enterleave(ex)
 end
 
 answers = {
-    (Enter,:while), (Leave,:while),
-    (Enter,:while), 1, 2, 3, (Leave,:while),
-    (Enter,:try), (Enter,:while), (Leave,:while), :try, (Leave,:try),
-    (Enter,:for), 2, 3, 4, (Leave,:for),
-    (Enter,:let), 5, (Leave,:let), 5,
-    (Enter,:comprehension), 12, 13, (Leave,:comprehension), [12,13],
-    (Enter,:function), 9, (Leave,:function), 81
+    :while, (Enter,:while), (Leave,:while),
+    :(=),
+    :while,(Enter,:while),:+=,:call,1,:+=,:call,2,:+=,:call,3,(Leave,:while),
+    :try, (Enter,:try), 
+        :while, (Enter,:while), (Leave,:while), :call, "try", 
+    (Leave,:try),
+    :for, (Enter,:for), :call, 2, :call, 3, :call, 4, (Leave,:for),
+    :call, (Enter,:let), :call, 5, (Leave,:let), 5,
+    :call, (Enter,:comprehension), 
+        :call, 12, :call, 13, 
+    (Leave,:comprehension), [12,13],
+    :function,
+    :call, (Enter,:function), :call, 9, :call, (Leave,:function), 81
 }
 
 @test_enterleave begin
@@ -49,7 +64,7 @@ answers = {
     try
         while false
         end
-        output(:try)
+        output("try")
     end    
 
     for x=2:4
