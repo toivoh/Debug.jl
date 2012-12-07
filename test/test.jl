@@ -6,6 +6,8 @@ using Base, Debug
 println("Commands:")
 println("--------")
 println("s: step into")
+println("n: step over any enclosed scope")
+println("o: step out from the current scope")
 println("c: continue to next breakpoint")
 println("q: quit")
 println()
