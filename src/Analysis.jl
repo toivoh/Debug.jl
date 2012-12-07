@@ -21,14 +21,6 @@ get_linenumber(ex::Ex)             = argof(ex,1)
 get_linenumber(ex::LineNumberNode) = ex.line
 get_sourcefile(ex::Ex)             = string(argof(ex,2))
 
-const dict_comprehension        = symbol("dict-comprehension")
-const typed_comprehension       = symbol("typed-comprehension")
-const typed_dict_comprehension  = symbol("typed-dict-comprehension")
-
-const untyped_comprehensions = [:comprehension, dict_comprehension]
-const typed_comprehensions =   [typed_comprehension, typed_dict_comprehension]
-const comprehensions = [untyped_comprehensions, typed_comprehensions]
-
 
 # ---- wrap(): add scoping info to AST ------------------------------------
 # Rewrites AST, exchanging Expr:s and leaves for Node:s.

@@ -54,8 +54,6 @@ function instrument(c::Context, node::Node)
     end
 end
 
-const frame_heads = Set(:while, :try, :for, :let, Analysis.comprehensions...)
-
 code_enterleave(::Nothing, ex, ::Nothing) = ex
 code_enterleave(enter,     ex, ::Nothing) = quote; $enter; $ex; end
 code_enterleave(::Nothing, ex, leave) = :(try         $ex; finally $leave; end)
@@ -63,7 +61,7 @@ code_enterleave(enter,     ex, leave) = :(try $enter; $ex; finally $leave; end)
 
 function instrument_node(c::Context, node::Node)
     ex = instrument_args(c, node)
-    if is_function(node) || is_expr(node, frame_heads)
+    if is_scope_node(node)
         enter, leave = code_trap_if(c,Enter(node)), code_trap_if(c,Leave(node))
         if is_function(node)
             @assert is_function(ex)
