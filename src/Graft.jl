@@ -95,6 +95,8 @@ function instrument_args(c::Context, node::ExNode)
             name = gensym("scope")
             push(args, code_scope(name, c.scope_ex, envof(node), syms))
             c = Context(c, envof(node), name)
+
+            node.introduces_scope = true
         end
     end
     for arg in argsof(node); push(args, instrument(c, arg)); end

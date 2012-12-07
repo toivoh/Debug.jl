@@ -61,10 +61,11 @@ Loc(ex, line)       = Loc(ex, line, "")
 type Node{T}
     value::T
     parent::Union(Node, Nothing)
+    introduces_scope::Bool
     state::State
-    loc::Loc
+    loc::Loc    
     
-    function set_args_parent(node::Node)
+    function adopt_args!(node::Node)
         if T <: ExValue
             for arg in node.value.args
                 set_parent(arg, node)
@@ -73,9 +74,9 @@ type Node{T}
         node
     end
 
-    Node(value::T)                 = set_args_parent(new(value, nothing))
-    Node(value::T, s::State)       = set_args_parent(new(value, nothing, s))
-    Node(value::T,s::State,l::Loc) = set_args_parent(new(value, nothing, s, l))
+    Node(value::T)                 = adopt_args!(new(value,nothing,false))
+    Node(value::T, s::State)       = adopt_args!(new(value,nothing,false,s))
+    Node(value::T,s::State,l::Loc) = adopt_args!(new(value,nothing,false,s,l))
 end
 Node{T}(value::T, args...) = Node{T}(value, args...)
 

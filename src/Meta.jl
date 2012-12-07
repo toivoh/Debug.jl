@@ -6,7 +6,7 @@
 module Meta
 using Base, AST
 export Ex, quot, is_expr
-export isblocknode, is_in_type, is_function
+export isblocknode, is_function, is_in_type, introduces_scope
 export headof, argsof, argof, nargsof
 
 typealias Ex Union(Expr, ExNode)
@@ -22,6 +22,11 @@ is_expr(ex,     head, n::Int)  = is_expr(ex, head) && nargsof(ex) == n
 
 isblocknode(node) = is_expr(node, :block)
 
+# for both kinds of AST:s
+is_function(node)     = false
+is_function(node::Ex) = is_expr(node, [:function, :->], 2) ||
+    (is_expr(node, :(=), 2) && is_expr(argof(node,1), :call))
+
 # only for Node/Nothing
 is_in_type(::Nothing) = false
 function is_in_type(node::Node)
@@ -32,10 +37,8 @@ function is_in_type(node::Node)
     end
 end
 
-# for both kinds of AST:s
-is_function(node)     = false
-is_function(node::Ex) = is_expr(node, [:function, :->], 2) ||
-    (is_expr(node, :(=), 2) && is_expr(argof(node,1), :call))
+# only for Node
+introduces_scope(node::Node) = node.introduces_scope
 
 ## Accessors that work on both Expr:s and ExNode:s ##
 
