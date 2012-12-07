@@ -41,20 +41,36 @@ function code_scope(scopesym::Symbol, parent, env::Env, syms)
     ))
 end
 
-is_in_type(::Nothing) = false
-function is_in_type(node::Node)
-    if isa(node.state, Rhs)
-        isa(envof(node), LocalEnv) && is_expr(envof(node).source, :type)
+
+code_trap(c::Context, node) = expr(:call, c.trap_ex, quot(node), c.scope_ex)
+code_trap_if(c::Context,node) = c.trap_pred(node) ? code_trap(c,node) : nothing
+
+const frame_heads = Set(:while, :try, :for, :let, Analysis.comprehensions...)
+
+code_enterleave(::Nothing, ex, ::Nothing) = ex
+code_enterleave(enter,     ex, ::Nothing) = quote; $enter; $ex; end
+code_enterleave(::Nothing, ex, leave) = :(try         $ex; finally $leave; end)
+code_enterleave(enter,     ex, leave) = :(try $enter; $ex; finally $leave; end)
+
+function instrument(c::Context, node::Node)
+    ex = instrument_node(c, node)
+    if is_function(node) || is_expr(node, frame_heads)
+        enter, leave = code_trap_if(c,Enter(node)), code_trap_if(c,Leave(node))
+        if is_function(node)
+            @assert is_function(ex)
+            expr(ex.head, ex.args[1], code_enterleave(enter,ex.args[2],leave))
+        else
+            code_enterleave(enter, ex, leave)
+        end
     else
-        is_in_type(parentof(node))
+        ex
     end
 end
 
-code_trap(c::Context, node::Node) = expr(:call,c.trap_ex,quot(node),c.scope_ex)
 seq(ex)     = ex
 seq(exs...) = expr(:block, exs...)
 
-function instrument(c::Context, node::Node)
+function instrument_node(c::Context, node::Node)
     if isa(node.state, Rhs) && !is_in_type(node)
         code = {}
         if c.trap_pred(node);  push(code, code_trap(c, node)); end

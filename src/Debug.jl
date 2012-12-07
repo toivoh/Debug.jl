@@ -13,6 +13,7 @@ include(find_in_path("Debug/src/Flow.jl"))
 include(find_in_path("Debug/src/UI.jl"))
 using AST, Meta, Analysis, Graft, Eval, Flow, UI
 
+is_trap(::Event)    = false
 is_trap(::LocNode)  = false
 is_trap(node::Node) = isblocknode(parentof(node))
 

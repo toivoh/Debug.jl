@@ -5,7 +5,8 @@
 
 module Meta
 using Base, AST
-export Ex, quot, is_expr, isblocknode
+export Ex, quot, is_expr
+export isblocknode, is_in_type, is_function
 export headof, argsof, argof, nargsof
 
 typealias Ex Union(Expr, ExNode)
@@ -21,6 +22,21 @@ is_expr(ex,     head, n::Int)  = is_expr(ex, head) && nargsof(ex) == n
 
 isblocknode(node) = is_expr(node, :block)
 
+# only for Node/Nothing
+is_in_type(::Nothing) = false
+function is_in_type(node::Node)
+    if isa(node.state, Rhs)
+        isa(envof(node), LocalEnv) && is_expr(envof(node).source, :type)
+    else
+        is_in_type(parentof(node))
+    end
+end
+
+# for both kinds of AST:s
+is_function(node)     = false
+is_function(node::Ex) = is_expr(node, [:function, :->], 2) ||
+    (is_expr(node, :(=), 2) && is_expr(argof(node,1), :call))
+
 ## Accessors that work on both Expr:s and ExNode:s ##
 
 headof(ex::Expr)   = ex.head
@@ -31,5 +47,6 @@ argsof(ex::ExNode) = valueof(ex).args
 
 nargsof(ex)  = length(argsof(ex))
 argof(ex, k) = argsof(ex)[k]
+
 
 end # module

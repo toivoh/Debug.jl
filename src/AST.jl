@@ -13,6 +13,7 @@ export Loc, Plain, ExValue, Location
 export Node, ExNode, PLeaf, SymNode, LocNode
 export is_emittable, is_evaluable
 export parentof, valueof, envof, exof
+export Event, Enter, Leave
 
 
 # ---- Env: analysis-time scope -----------------------------------------------
@@ -120,5 +121,16 @@ exof(node::SymNode) = valueof(node)
 exof(node::LocNode) = node.loc.ex
 exof(node::Node)    = exof(valueof(node))
 exof(value::Union(Plain, Loc)) = value.ex
+
+
+# ---- Events -----------------------------------------------------------------
+
+abstract Event{T<:Node}
+
+type Enter{T<:Node} <: Event{T};  node::Node;  end
+type Leave{T<:Node} <: Event{T};  node::Node;  end
+
+Enter{T<:Node}(node::T) = Enter{T}(node)
+Leave{T<:Node}(node::T) = Leave{T}(node)
 
 end # module
