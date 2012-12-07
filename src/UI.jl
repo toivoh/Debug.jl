@@ -10,7 +10,7 @@ export trap
 instrument(ex) = Flow.instrument(trap, ex)
 
 state = DBState()
-function trap(node::Node, scope::Scope)
+function trap(node, scope::Scope)
     if !Flow.trap(state, node, scope); return; end
     print("\nat ", node.loc.file, ":", node.loc.line)
     while true
@@ -18,7 +18,7 @@ function trap(node::Node, scope::Scope)
         cmd = readline(stdin_stream)[1:end-1]
         if cmd == "s";     break
         elseif cmd == "n"; stepover!(state); break
-        elseif cmd == "o"; stepout!(state);  break
+        elseif cmd == "o"; stepout!(state, node, scope);  break
         elseif cmd == "c"; continue!(state); break
         elseif cmd == "q"; continue!(state); error("interrupted")
         end
