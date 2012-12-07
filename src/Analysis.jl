@@ -27,6 +27,7 @@ const typed_dict_comprehension  = symbol("typed-dict-comprehension")
 
 const untyped_comprehensions = [:comprehension, dict_comprehension]
 const typed_comprehensions =   [typed_comprehension, typed_dict_comprehension]
+const comprehensions = [untyped_comprehensions, typed_comprehensions]
 
 
 # ---- wrap(): add scoping info to AST ------------------------------------
@@ -110,7 +111,7 @@ function argstates(state::SimpleState, ex)
     elseif head === :while;              [Rhs(e),        Rhs(child(ex, e))]
     elseif head === :try; cc = child(ex,e); [Rhs(child(ex,e)), Def(cc),Rhs(cc)]
     elseif head === :for; c = child(ex, e);  [SplitDef(c,e), Rhs(c)]
-    elseif contains([untyped_comprehensions, :let], head); c = child(ex, e); 
+    elseif contains([:let, untyped_comprehensions], head); c = child(ex, e); 
         [Rhs(c), fill(SplitDef(c,e), nargs-1)]
     elseif contains(typed_comprehensions, head); c = child(ex, e)
         [Rhs(e), Rhs(c), fill(SplitDef(c,e), nargs-2)]
