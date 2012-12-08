@@ -26,6 +26,7 @@ macro test_step(ex)
 end
 
 const instructions = {
+    (1, stepover!), 
     (2, singlestep!), (3, singlestep!), (4, singlestep!),
     (6, stepover!), (9, stepover!),
     (10, singlestep!), (11, stepout!),

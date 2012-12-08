@@ -25,7 +25,9 @@ function trap(node, scope::Scope)
 
         try
             ex0, nc = parse(cmd)
-            ex = interpolate({:st => state, :n => node, :s => scope}, ex0)
+            ex = interpolate({:st => state, :n => node, :s => scope,
+                              :bp => state.breakpoints, 
+                              :pre => state.grafts}, ex0)
             r = debug_eval(scope, ex)
             if !is(r, nothing); show(r); println(); end
         catch e

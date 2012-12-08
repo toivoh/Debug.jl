@@ -4,7 +4,7 @@
 # Flow control for interactive debug trap
 
 module Flow
-using Base, Meta, AST, Runtime, Graft
+using Base, Meta, AST, Runtime, Graft, Eval
 import AST.is_emittable, Base.isequal
 export @bp, BPNode, DBState
 export continue!, singlestep!, stepover!, stepout!
@@ -52,7 +52,9 @@ leave(cond::Cond, ::Frame) = cond
 ## DBState ##
 type DBState
     cond::Cond
-    DBState() = new(Continue())
+    breakpoints::Set{Node}
+    grafts::Dict{Node,Any}
+    DBState() = new(Continue(), Set{Node}(), Dict{Node,Any}())
 end
 
 continue!(  s::DBState) = (s.cond = Continue())
@@ -62,7 +64,6 @@ function stepout!(st::DBState, node::Node, s::Scope)
     st.cond = ContinueInside(enclosing_scope_frame(Frame(node,s)),SingleStep())
 end
 
-trap(state::DBState,::BPNode,s::Scope) = (singlestep!(state); false)
 function trap(state::DBState, e::Enter, s::Scope)
     state.cond = enter(state.cond, Frame(e.node, s))
     false
@@ -71,6 +72,12 @@ function trap(state::DBState, e::Leave, s::Scope)
     state.cond = leave(state.cond, Frame(e.node, s))
     false
 end
-trap(state::DBState, n::Node, s::Scope) = does_trap(state.cond)
+function trap(state::DBState, n::Node, s::Scope)
+    if isa(n, BPNode) || has(state.breakpoints, n); singlestep!(state); end
+    if has(state.grafts, n)
+        debug_eval(s, state.grafts[n])
+    end
+    does_trap(state.cond)    
+end
 
 end # module
