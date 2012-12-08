@@ -6,7 +6,7 @@
 module Runtime
 using Base, AST, Meta
 import Base.ref, Base.assign, Base.has, Base.isequal
-export Scope, ModuleScope, LocalScope, getter, setter
+export Scope, ModuleScope, LocalScope, getter, setter, get_eval
 export Frame, parent_frame, enclosing_scope_frame, scope_frameof
 
 
@@ -14,7 +14,9 @@ export Frame, parent_frame, enclosing_scope_frame, scope_frameof
 
 abstract Scope
 
-type ModuleScope <: Scope; end
+type ModuleScope <: Scope
+    eval::Function
+end
 type LocalScope <: Scope
     parent::Scope
     syms::Dict
@@ -32,6 +34,9 @@ getter(scope::LocalScope, sym::Symbol) = get_entry( scope, sym)[1]
 setter(scope::LocalScope, sym::Symbol) = get_entry( scope, sym)[2]
 ref(   scope::LocalScope,     sym::Symbol) = getter(scope, sym)()
 assign(scope::LocalScope, x,  sym::Symbol) = setter(scope, sym)(x)
+
+get_eval(scope::ModuleScope) = scope.eval
+get_eval(scope::LocalScope)  = get_eval(scope.parent)
 
 
 # ---- Frame: Runtime node instance -------------------------------------------

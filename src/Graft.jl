@@ -21,8 +21,12 @@ end
 Context(c::Context,e::Env,scope_ex) = Context(c.trap_pred,c.trap_ex,e,scope_ex)
 
 function instrument(trap_pred::Function, trap_ex, ex)
-    instrument(Context(trap_pred, trap_ex, NoEnv(), quot(ModuleScope())),
-               analyze(ex,true))
+    @gensym scope    
+    ex = instrument(Context(trap_pred,trap_ex,NoEnv(),scope), analyze(ex,true))
+    quote
+        $scope = $(quot(ModuleScope))(eval)
+        $ex
+    end
 end
 
 
