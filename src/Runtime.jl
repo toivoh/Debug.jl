@@ -6,7 +6,7 @@
 module Runtime
 using Base, AST, Meta
 import Base.ref, Base.assign, Base.has, Base.isequal
-export Scope, NoScope, LocalScope, getter, setter
+export Scope, ModuleScope, LocalScope, getter, setter
 export Frame, parent_frame, enclosing_scope_frame, scope_frameof
 
 
@@ -14,15 +14,15 @@ export Frame, parent_frame, enclosing_scope_frame, scope_frameof
 
 abstract Scope
 
-type NoScope <: Scope; end
+type ModuleScope <: Scope; end
 type LocalScope <: Scope
     parent::Scope
     syms::Dict
     env::Env
 end
 
-has(s::NoScope,    sym::Symbol) = false
-has(s::LocalScope, sym::Symbol) = has(s.syms, sym) || has(s.parent, sym)
+has(s::ModuleScope, sym::Symbol) = false
+has(s::LocalScope,  sym::Symbol) = has(s.syms, sym) || has(s.parent, sym)
 
 function get_entry(scope::LocalScope, sym::Symbol)
     has(scope.syms, sym) ? scope.syms[sym] : get_entry(scope.parent, sym)

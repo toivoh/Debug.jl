@@ -7,7 +7,7 @@ module Eval
 using Base, AST, Runtime, Graft
 export debug_eval, Scope
 
-debug_eval(scope::NoScope, ex) = eval(ex)
+debug_eval(scope::ModuleScope, ex) = eval(ex)
 function debug_eval(scope::LocalScope, ex)
     e = child(expr(:let, ex), NoEnv()) # todo: actually wrap ex in a let?
     grafted = graft(e, scope, ex)
