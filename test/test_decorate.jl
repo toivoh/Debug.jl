@@ -149,6 +149,16 @@ end
         @syms e [y]
         y = 2
     end
+    try
+        @syms x
+        local x
+    catch e
+        @syms e [y]
+        y = 2
+    finally
+        @syms z
+        local z
+    end
 end
 
 # for

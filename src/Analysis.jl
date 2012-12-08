@@ -107,7 +107,9 @@ function argstates(state::SimpleState, ex)
         
     elseif contains([:global, :local], head); fill(Def(e), nargs)
     elseif head === :while;              [Rhs(e),        Rhs(child(ex, e))]
-    elseif head === :try; cc = child(ex,e); [Rhs(child(ex,e)), Def(cc),Rhs(cc)]
+    elseif head === :try
+        cc = child(ex,e); states = [Rhs(child(ex,e)), Def(cc),Rhs(cc)]
+        nargs === 4 ? [states, Rhs(child(ex,e))] : states
     elseif head === :for; c = child(ex, e);  [SplitDef(c,e), Rhs(c)]
     elseif contains([:let, untyped_comprehensions], head); c = child(ex, e); 
         [Rhs(c), fill(SplitDef(c,e), nargs-1)]
