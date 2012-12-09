@@ -7,6 +7,17 @@ module UI
 using Base, Meta, AST, Eval, Flow
 export trap
 
+const helptext = 
+"Commands:
+--------
+h: show this help text
+s: step into
+n: step over any enclosed scope
+o: step out from the current scope
+c: continue to next breakpoint
+q: quit"
+
+
 instrument(ex) = Flow.instrument(trap, ex)
 
 state = DBState()
@@ -21,17 +32,18 @@ function trap(node, scope::Scope)
             elseif cmd == "o"; stepout!(state, node, scope);  break
             elseif cmd == "c"; continue!(state); break
             elseif cmd == "q"; continue!(state); error("interrupted")
-            end
-            
-            try
-                ex0, nc = parse(cmd)
-                ex = interpolate({:st => state, :n => node, :s => scope,
-                                  :bp => state.breakpoints, 
-                                  :pre => state.grafts}, ex0)
-                r = debug_eval(scope, ex)
-                if !is(r, nothing); show(r); println(); end
-            catch e
-                println(e)
+            elseif cmd == "h"; println(helptext)
+            else
+                try
+                    ex0, nc = parse(cmd)
+                    ex = interpolate({:st => state, :n => node, :s => scope,
+                                      :bp => state.breakpoints, 
+                                      :pre => state.grafts}, ex0)
+                    r = debug_eval(scope, ex)
+                    if !is(r, nothing); show(r); println(); end
+                catch e
+                    println(e)
+                end
             end
         end
     end
