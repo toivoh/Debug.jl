@@ -29,20 +29,20 @@ The following single-character commands have special meaing:
 `c`: continue to next breakpoint   
 `q`: quit debug session (calls `error("interrupted")`)   
 Anything else is parsed and evaluated in the current scope,
-including e.g. the string `" s"`.
+including the above characters with spaces prepended/appended.
 
 Example:
 
-    julia> @debug let
-           parts = {}
-           @bp       # 3
-           for j=1:3 # 4
-           for i=1:3 # 5
-           push(parts,"($i,$j) ") # 6
-           end # 7
-           end # 8
-           @bp # 9
-           println(parts...)
+    julia> @debug let  # line 1
+               parts = {} # 2
+               @bp        # 3
+               for j=1:3  # 4
+                   for i=1:3  # 5
+                       push(parts,"($i,$j) ") # 6
+                   end        # 7
+               end        # 8
+               @bp        # 9
+               println(parts...)
            end
 
     at :3
@@ -104,33 +104,33 @@ Example:
 
 Experimental Features
 ---------------------
-Positions in the instrumented code are represented by their corresponding nodes
-in the decorated AST produced for it.
 The debugger currently makes available some of its internal state through
-interpolation syntax:   
+interpolation syntax, which can be used e.g. to control aspects of the debugging process:       
 `$n`:    The current node   
 `$s`:    The current scope   
 `$bp`:   `Set{Node}` of enabled breakpoints   
 `$nobp`: `Set{Node}` of disabled `@bp` breakpoints   
 `$pre`:  `Dict{Node}` of grafts   
-These can be used e.g. to control aspects of the debugging process.   
+Nodes refer to positions in the instrumented code,
+represented by nodes in the decorated AST produced from the original code.
 
-Breakpoints can be handled using e.g.
+Breakpoints can be manipulated using e.g.
 
-    add($bp,   $n)  # set breakpoint at the current node
-    del($bp,   $n)  # unset breakpoint at the current node
-    add($nobp, $n)  # ignore @bp breakpoint at current node
+    add($bp, $n)    # set breakpoint at the current node
+    del($bp, $n)    # unset breakpoint at the current node
+    add($nobp, $n)  # ignore @bp breakpoint at the current node
 
-The user can also graft code snippets into existing code. E.g.
+Code snippets can also be grafted into instrumented code. E.g.
 
     $pre[$n] = :(x = 0)
 
-will make the code `x = 0` execute right before the current node,
-at each visit.
+will make the code `x = 0` execute right before each execution of the current
+node.
 
-The user may navigate the decorated AST to find other nodes to use than
-the current node `$n` in the examples above, though there is a need for more
-tools to support this.
+Other nodes than the current node `$n` could be used
+in the examples above.
+Such nodes can be found by navigating from the current node,
+but the there is not much support for this yet.
 
 Custom Traps
 ------------
@@ -183,23 +183,26 @@ which also allows to to specify at which nodes to add traps.
 
 How it Works
 ------------
-The main effort so far has gone into analyzing the scoping of symbols in a 
-piece of code, and to modify code to allow one piece of code to be evaluated as
+The foundations of the `Debug` package is code for
+analyzing the scoping of symbols in a piece of code, 
+and to modify code to allow one piece of code to be evaluated as
 if it were at some particular point in another piece of code.
 The interactive debug facility is built on top of this.
+The `@debug` macro triggers a number of steps.
 
-* The code passed to `@debug` is _analyzed_.
-  AST nodes are replaced with `Debug.AST.Node` nodes that represent the same
-  thing, but also keep track of parent, static scope, and location in the code.
-  Static scopes keep track of the symbols that they (re)introduce.
+* The code passed to `@debug` is _analyzed_,
+  and turned into a decorated AST built from nodes of type `Debug.AST.Node`.
+  The format is almost identical to julia's native AST format,
+  but nodes also keep track of
+  parent, static scope, and location in the source code.
 * The code is then _instrumented_ to insert trap calls at each stepping point,
   entry/exit to scope blocks, etc.
-  A `Scope` (runtime scope) object that contains getter and setter
+  A `Scope` object that contains getter and setter
   functions for each visible local symbol is also created upon entry to
   each block that lies within a new environment.
 * The code passed to `debug_eval` is analyzed in the same way as to `@debug`.
   The code is then _grafted_ into the supplied scope by
-  replacing each reads/write to a variable
+  replacing each read/write to a variable
   with a call to the corresponding getter/setter function,
   if it is visible at that point in the grafted code.
 
