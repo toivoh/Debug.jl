@@ -12,84 +12,139 @@ In julia, install the `Debug` package:
     Pkg.init()  # If you haven't done it before
     Pkg.add("Debug")
 
+`Debug` currently requires a julia build from 2012-12-05 or later.
+
 Interactive Usage
 -----------------
-Use the `@debug` macro to mark code that you want to step through.
+Use the `@debug` macro to mark code that you want to be able to step through.
+Use the `@bp` macro to set a breakpoint -- interactive debugging will commence at the first breakpoint encountered.
 `@debug` can only be used in global scope, since it needs access to all
 scopes that surround a piece of code to be analyzed.
 
-Simple example:
+The following single-character commands have special meaing:   
+`h`: display help text   
+`s`: step into   
+`n`: step over any enclosed scope   
+`o`: step out from the current scope   
+`c`: continue to next breakpoint   
+`q`: quit debug session (calls `error("interrupted")`)   
+Anything else is parsed and evaluated in the current scope,
+including e.g. the string `" s"`.
 
-    julia> load("Debug.jl")
+Example:
 
-    julia> using Debug
-
-    julia> @debug let           # line 1
-               x = 0            # line 2
-               for k=1:3        # line 3
-                   @bp          # line 4
-                   x += k       # line 5
-               end              # line 6
-               print("x = $x")  # line 7
+    julia> @debug let
+           parts = {}
+           @bp       # 3
+           for j=1:3 # 4
+           for i=1:3 # 5
+           push(parts,"($i,$j) ") # 6
+           end # 7
+           end # 8
+           @bp # 9
+           println(parts...)
            end
 
-    at :5
-    debug:5> k,x
-    (1,0)
+    at :3
+    debug:3> j
+    in anonymous: j not defined
+ 
+    debug:3> parts
+    {}
 
-    debug:5> x = 10
-    10
+    debug:3> s
 
-    debug:5> k,x
-    (1,10)
-
-    debug:5> c
-
-    at :5
-    debug:5> k,x
-    (2,11)
-
-    debug:5> c
+    at :4
+    debug:4> s
 
     at :5
-    debug:5> k,x
-    (3,13)
-
     debug:5> s
 
-    at :7
-    debug:7> k,x
-    in anonymous: k not defined
+    at :6
+    debug:6> i
+    1
 
-    debug:7> x
-    16
+    debug:6> s
 
-    debug:7> x += 4
-    20
+    at :6
+    debug:6> i
+    2
 
-    debug:7> s
-    x = 20
+    debug:6> parts
+    {"(1,1) "}
 
-When inside a `@debug` block, `@bp` breaks and enters the debugger.   
-The following single-character commands have special meaing:   
-`s`: step into    
-`c`: continue to next breakpoint   
-`q`: quit debug session (calls `error("interrupted")`)    
-Any command string that is not one of these single characters is parsed
-and evaluated in the current scope.
+    debug:6> parts = {}
+    {}
+
+    debug:6> o
+
+    at :5
+    debug:5> j
+    2
+
+    debug:5> n
+
+    at :5
+    debug:5> j
+    3
+
+    debug:5> push(parts, "foo ")
+    {"(2,1) ", "(3,1) ", "(1,2) ", "(2,2) ", "(3,2) ", "foo "}
+
+    debug:5> c
+
+    at :9
+    debug:9> parts
+    {"(2,1) ", "(3,1) ", "(1,2) ", "(2,2) "  ...  "(1,3) ", "(2,3) ", "(3,3) "}
+
+    debug:9> c
+    (2,1) (3,1) (1,2) (2,2) (3,2) foo (1,3) (2,3) (3,3) 
+
+    julia>
+
+Experimental Features
+---------------------
+Positions in the instrumented code are represented by their corresponding nodes
+in the decorated AST produced for it.
+The debugger currently makes available some of its internal state through
+interpolation syntax:   
+`$n`:    The current node   
+`$s`:    The current scope   
+`$bp`:   `Set{Node}` of enabled breakpoints   
+`$nobp`: `Set{Node}` of disabled `@bp` breakpoints   
+`$pre`:  `Dict{Node}` of grafts   
+These can be used e.g. to control aspects of the debugging process.   
+
+Breakpoints can be handled using e.g.
+
+    add($bp,   $n)  # set breakpoint at the current node
+    del($bp,   $n)  # unset breakpoint at the current node
+    add($nobp, $n)  # ignore @bp breakpoint at current node
+
+The user can also graft code snippets into existing code. E.g.
+
+    $pre[$n] = :(x = 0)
+
+will make the code `x = 0` execute right before the current node,
+at each visit.
+
+The user may navigate the decorated AST to find other nodes to use than
+the current node `$n` in the examples above, though there is a need for more
+tools to support this.
 
 Custom Traps
 ------------
-The `@debug` macro takes an optional trap function to be used instead of
-the default interactive trap. The example
+There is an `@instrument` macro that works similar to the `@debug` macro,
+but takes as first argument a trap function to be called at each
+expression that lies directly in a block. The example
 
     load("Debug.jl")
     using Base, Debug
 
     firstline = -1
-    function trap(loc::Loc, scope::Scope) 
-        global firstline = (firstline == -1) ? loc.line : firstline
-        line = loc.line - firstline + 1
+    function trap(node::Node, scope::Scope) 
+        global firstline = (firstline == -1) ? node.loc.line : firstline
+        line = node.loc.line - firstline + 1
         print(line, ":")
 
         if (line == 2); debug_eval(scope, :(x += 1)) end
@@ -99,7 +154,7 @@ the default interactive trap. The example
         println()
     end
 
-    @debug trap function f(n)
+    @instrument trap function f(n)
         x = 0       # line 1
         for k=1:n   # line 2
             x += k  # line 3
@@ -123,20 +178,23 @@ produces the output
 The `scope` argument passed to the `trap` function can be used with
 `debug_eval(scope, ex)` to evaluate an expression `ex` as if it were in 
 that scope.
+`@instrument` in turn relies on the function `Debug.Graft.instrument`,
+which also allows to to specify at which nodes to add traps.
 
 How it Works
 ------------
 The main effort so far has gone into analyzing the scoping of symbols in a 
 piece of code, and to modify code to allow one piece of code to be evaluated as
 if it were at some particular point in another piece of code.
-The interactive debug facility is built on top of this toolbox.
+The interactive debug facility is built on top of this.
 
-* The code passed to `@debug` is _analyzed_ to mark each block and symbol with
-  an environment (static scope).
-  Each environment has a parent and a set of symbols that are introduced in it,
-  including reintroduced symbols that shadow definitions in an outer scope.
-* The code is then _instrumented_ to insert a trap call after each line number
-  in a block. A `Scope` (runtime scope) object that contains getter and setter
+* The code passed to `@debug` is _analyzed_.
+  AST nodes are replaced with `Debug.AST.Node` nodes that represent the same
+  thing, but also keep track of parent, static scope, and location in the code.
+  Static scopes keep track of the symbols that they (re)introduce.
+* The code is then _instrumented_ to insert trap calls at each stepping point,
+  entry/exit to scope blocks, etc.
+  A `Scope` (runtime scope) object that contains getter and setter
   functions for each visible local symbol is also created upon entry to
   each block that lies within a new environment.
 * The code passed to `debug_eval` is analyzed in the same way as to `@debug`.
@@ -156,7 +214,3 @@ but I'm bound to have missed something. Also,
 Known issues can also be found at the
 [issues page](https://github.com/toivoh/Debug.jl/issues).
 Bug reports and feature requests are welcome.
-
-The interactive debugger is very crude so far.
-It should be the next target for improvement 
-once the scoping analysis is reasonably accurate.
