@@ -10,12 +10,25 @@ export trap
 const helptext = 
 "Commands:
 --------
-h: show this help text
+h: display this help text
 s: step into
 n: step over any enclosed scope
 o: step out from the current scope
 c: continue to next breakpoint
-q: quit"
+q: quit
+
+Debug variables:
+---------------
+\$n:   current node
+\$s:   current scope
+\$bp:  Set{Node} of enabled breakpoints
+\$pre: Dict{Node} of grafts
+
+Example usage:
+-------------
+add(\$bp, \$n)        # set breakpoint at the current node
+del(\$bp, \$n)        # unset breakpoint at the current node
+\$pre[\$n] = :(x = 0) # execute x=0 just before the current node, at each visit"
 
 
 instrument(ex) = Flow.instrument(trap, ex)
