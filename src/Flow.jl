@@ -53,8 +53,9 @@ leave(cond::Cond, ::Frame) = cond
 type DBState
     cond::Cond
     breakpoints::Set{Node}
+    ignore_bp::Set{Node}
     grafts::Dict{Node,Any}
-    DBState() = new(Continue(), Set{Node}(), Dict{Node,Any}())
+    DBState() = new(Continue(), Set{Node}(), Set{Node}(), Dict{Node,Any}())
 end
 
 continue!(  s::DBState) = (s.cond = Continue())
@@ -72,9 +73,11 @@ function pretrap(state::DBState, e::Leave, s::Scope)
     state.cond = leave(state.cond, Frame(e.node, s))
     false
 end
-function pretrap(state::DBState, node::Node, s::Scope)
-    if isa(node,BPNode) || has(state.breakpoints,node); singlestep!(state); end
-    does_trap(state.cond)    
+function pretrap(st::DBState, node::Node, s::Scope)
+    if (isa(node,BPNode)&&!has(st.ignore_bp,node)) ||  has(st.breakpoints,node)
+        singlestep!(st)
+    end
+    does_trap(st.cond)    
 end
 
 posttrap(state::DBState, node, s::Scope) = nothing

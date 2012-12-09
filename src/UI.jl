@@ -15,14 +15,15 @@ s: step into
 n: step over any enclosed scope
 o: step out from the current scope
 c: continue to next breakpoint
-q: quit
+q: quit debug session (calls error(\"interrupted\"))
 
 Debug variables:
 ---------------
-\$n:   current node
-\$s:   current scope
-\$bp:  Set{Node} of enabled breakpoints
-\$pre: Dict{Node} of grafts
+\$n:    current node
+\$s:    current scope
+\$bp:   Set{Node} of enabled breakpoints
+\$nobp: Set{Node} of disabled @bp breakpoints
+\$pre:  Dict{Node} of grafts
 
 Example usage:
 -------------
@@ -49,9 +50,11 @@ function trap(node, scope::Scope)
             else
                 try
                     ex0, nc = parse(cmd)
-                    ex = interpolate({:st => state, :n => node, :s => scope,
-                                      :bp => state.breakpoints, 
-                                      :pre => state.grafts}, ex0)
+                    ex = interpolate({
+                            :st => state, :n => node, :s => scope,
+                            :bp => state.breakpoints, :nobp => state.ignore_bp,
+                            :pre => state.grafts}, 
+                        ex0)
                     r = debug_eval(scope, ex)
                     if !is(r, nothing); show(r); println(); end
                 catch e
