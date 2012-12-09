@@ -9,7 +9,7 @@ ip    = 1
 function trap(node, scope::Scope)
     global firstline, ip
     if isa(node, BPNode);  firstline = node.loc.line;  end
-    if !Flow.trap(state, node, scope); return; end
+    if !Flow.pretrap(state, node, scope); return; end
 
     line = node.loc.line - firstline + 1
     l, f = instructions[ip]

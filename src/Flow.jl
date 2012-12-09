@@ -64,20 +64,25 @@ function stepout!(st::DBState, node::Node, s::Scope)
     st.cond = ContinueInside(enclosing_scope_frame(Frame(node,s)),SingleStep())
 end
 
-function trap(state::DBState, e::Enter, s::Scope)
+function pretrap(state::DBState, e::Enter, s::Scope)
     state.cond = enter(state.cond, Frame(e.node, s))
     false
 end
-function trap(state::DBState, e::Leave, s::Scope) 
+function pretrap(state::DBState, e::Leave, s::Scope) 
     state.cond = leave(state.cond, Frame(e.node, s))
     false
 end
-function trap(state::DBState, n::Node, s::Scope)
-    if isa(n, BPNode) || has(state.breakpoints, n); singlestep!(state); end
-    if has(state.grafts, n)
-        debug_eval(s, state.grafts[n])
-    end
+function pretrap(state::DBState, node::Node, s::Scope)
+    if isa(node,BPNode) || has(state.breakpoints,node); singlestep!(state); end
     does_trap(state.cond)    
+end
+
+posttrap(state::DBState, node, s::Scope) = nothing
+function posttrap(state::DBState, node::Node, s::Scope)
+    if has(state.grafts, node)
+        debug_eval(s, state.grafts[node])
+    end
+    nothing
 end
 
 end # module
