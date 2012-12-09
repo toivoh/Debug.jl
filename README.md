@@ -134,7 +134,7 @@ but the there is not much support for this yet.
 
 Custom Traps
 ------------
-There is an `@instrument` macro that works similar to the `@debug` macro,
+There is an `@instrument` macro that works similarly to the `@debug` macro,
 but takes as first argument a trap function to be called at each
 expression that lies directly in a block. The example
 
@@ -188,7 +188,7 @@ analyzing the scoping of symbols in a piece of code,
 and to modify code to allow one piece of code to be evaluated as
 if it were at some particular point in another piece of code.
 The interactive debug facility is built on top of this.
-The `@debug` macro triggers a number of steps.
+The `@debug` macro triggers a number of steps:
 
 * The code passed to `@debug` is _analyzed_,
   and turned into a decorated AST built from nodes of type `Debug.AST.Node`.
