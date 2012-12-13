@@ -17,7 +17,9 @@ In julia, install the `Debug` package:
 Interactive Usage
 -----------------
 Use the `@debug` macro to mark code that you want to be able to step through.
-Use the `@bp` macro to set a breakpoint -- interactive debugging will commence at the first breakpoint encountered.
+Use the `@bp` macro to set a breakpoint
+-- interactive debugging will commence at the first breakpoint encountered.
+There is also a conditional version, e.g. `@bp x>0` will break only when x>0.
 `@debug` can only be used in global (i.e. module) scope, 
 since it needs access to all
 scopes that surround a piece of code to be analyzed.
