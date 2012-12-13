@@ -8,7 +8,7 @@ using Base, Meta, AST, Eval, Flow
 export trap
 
 const helptext = 
-"Commands:
+E"Commands:
 --------
 h: display this help text
 s: step into
@@ -20,17 +20,18 @@ To e.g. evaluate the variable named `n`, enter it as ` n` (with a space).
 
 Debug variables:
 ---------------
-\$n:    current node
-\$s:    current scope
-\$bp:   Set{Node} of enabled breakpoints
-\$nobp: Set{Node} of disabled @bp breakpoints
-\$pre:  Dict{Node} of grafts
+$n:    current node
+$s:    current scope
+$bp:   Set{Node} of enabled breakpoints
+$nobp: Set{Node} of disabled @bp breakpoints
+$pre:  Dict{Node} of grafts
 
 Example usage:
 -------------
-add(\$bp, \$n)        # set breakpoint at the current node
-del(\$bp, \$n)        # unset breakpoint at the current node
-\$pre[\$n] = :(x = 0) # execute x=0 just before the current node, at each visit"
+add($bp, $n)          # set breakpoint at the current node
+del($bp, $n)          # unset breakpoint at the current node
+add($nobp, $n)        # ignore @bp breakpoint at the current node
+$pre[$n] = :(x = 0) # execute x=0 just before the current node, at each visit"
 
 
 instrument(ex) = Flow.instrument(trap, ex)
