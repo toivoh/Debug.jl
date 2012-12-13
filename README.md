@@ -29,8 +29,9 @@ The following single-character commands have special meaing:
 `o`: step out from the current scope   
 `c`: continue to next breakpoint   
 `q`: quit debug session (calls `error("interrupted")`)   
-Anything else is parsed and evaluated in the current scope,
-including the above characters with spaces prepended/appended.
+Anything else is parsed and evaluated in the current scope.
+To e.g. evaluate a variable named `n`, it can be entered with
+a space prepended.
 
 Example:
 

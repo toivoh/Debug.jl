@@ -16,6 +16,7 @@ n: step over any enclosed scope
 o: step out from the current scope
 c: continue to next breakpoint
 q: quit debug session (calls error(\"interrupted\"))
+To e.g. evaluate the variable named `n`, enter it as ` n` (with a space).
 
 Debug variables:
 ---------------
