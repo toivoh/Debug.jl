@@ -37,7 +37,7 @@ function code_debug(ex)
             $globalvar = true
         end
         if !$globalvar
-            error("@debug: must be applied in global scope!")
+            error("@debug: must be applied in global (i.e. module) scope!")
         end
         $(esc(ex))
     end

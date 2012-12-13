@@ -18,7 +18,8 @@ Interactive Usage
 -----------------
 Use the `@debug` macro to mark code that you want to be able to step through.
 Use the `@bp` macro to set a breakpoint -- interactive debugging will commence at the first breakpoint encountered.
-`@debug` can only be used in global scope, since it needs access to all
+`@debug` can only be used in global (i.e. module) scope, 
+since it needs access to all
 scopes that surround a piece of code to be analyzed.
 
 The following single-character commands have special meaing:   
