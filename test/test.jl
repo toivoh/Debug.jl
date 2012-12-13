@@ -13,7 +13,7 @@ println("Type an expression to evaluate it in the current scope.")
     go_on = true
     while go_on
         println("$x, $y")
-        @bp
+        @bp x > 100
         x, y = y, x+y
     end
 end

@@ -15,9 +15,11 @@ type BreakPoint; end
 typealias BPNode Node{BreakPoint}
 is_emittable(::BPNode) = false
 
-macro bp()
-    Node(BreakPoint())
+macro bp(args...)
+    code_bp(args...)
 end
+code_bp()     = Node(BreakPoint())
+code_bp(pred) = :($(esc(pred)) ? $(code_bp()) : nothing)
 
 is_trap(::BPNode)   = true
 is_trap(::Event)    = true
