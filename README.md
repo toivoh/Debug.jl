@@ -106,8 +106,12 @@ Example:
 
 Experimental Features
 ---------------------
-The debugger currently makes available some of its internal state through
-interpolation syntax, which can be used e.g. to control aspects of the debugging process:       
+Interpolations in entered code will currently be evaluated in the context of
+the `Debug.Session` module, before the expression itself is evaluated
+in the context of the current scope.
+Some of the debugger's internal state has been made
+available through this mechanism, and can be manipulated to influence
+debugging:   
 `$n`:    The current node   
 `$s`:    The current scope   
 `$bp`:   `Set{Node}` of enabled breakpoints   
@@ -118,13 +122,14 @@ represented by nodes in the decorated AST produced from the original code.
 
 Breakpoints can be manipulated using e.g.
 
-    add($bp, $n)    # set breakpoint at the current node
-    del($bp, $n)    # unset breakpoint at the current node
-    add($nobp, $n)  # ignore @bp breakpoint at the current node
+    $(add(bp, n))    # set breakpoint at the current node
+    $(del(bp, n))    # unset breakpoint at the current node
+    $(add(nobp, n))  # ignore @bp breakpoint at the current node
 
+The above examples can also be written as e.g. `$add($bp, $n)`.   
 Code snippets can also be grafted into instrumented code. E.g.
 
-    $pre[$n] = :(x = 0)
+    $(pre[n] = :(x = 0))
 
 will make the code `x = 0` execute right before each execution of the current
 node.

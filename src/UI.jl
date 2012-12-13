@@ -3,8 +3,21 @@
 # =============
 # Interactive debug trap
 
+module Session
+using Base, Debug
+import Flow.DBState
+
+const st   = DBState()
+const bp   = st.breakpoints
+const nobp = st.ignore_bp
+const pre  = st.grafts
+
+end # module
+
+
 module UI
 using Base, Meta, AST, Eval, Flow
+import Session
 export trap
 
 const helptext = 
@@ -28,16 +41,16 @@ $pre:  Dict{Node} of grafts
 
 Example usage:
 -------------
-add($bp, $n)          # set breakpoint at the current node
-del($bp, $n)          # unset breakpoint at the current node
-add($nobp, $n)        # ignore @bp breakpoint at the current node
-$pre[$n] = :(x = 0) # execute x=0 just before the current node, at each visit"
+$(add(bp, n))        # set breakpoint at the current node
+$(del(bp, n))        # unset breakpoint at the current node
+$(add(nobp, n))      # ignore @bp breakpoint at the current node
+$(pre[n] = :(x = 0)) # execute x=0 just before the current node, at each visit"
 
 
 instrument(ex) = Flow.instrument(trap, ex)
 
-state = DBState()
 function trap(node, scope::Scope)
+    state = Session.st
     if Flow.pretrap(state, node, scope)
         print("\nat ", node.loc.file, ":", node.loc.line)
         while true
@@ -52,11 +65,8 @@ function trap(node, scope::Scope)
             else
                 try
                     ex0, nc = parse(cmd)
-                    ex = interpolate({
-                            :st => state, :n => node, :s => scope,
-                            :bp => state.breakpoints, :nobp => state.ignore_bp,
-                            :pre => state.grafts}, 
-                        ex0)
+                    Session.eval(:( (n,s)=$(quot((node,scope))) ))
+                    ex = interpolate(ex0)
                     r = debug_eval(scope, ex)
                     if !is(r, nothing); show(r); println(); end
                 catch e
@@ -68,18 +78,16 @@ function trap(node, scope::Scope)
     Flow.posttrap(state, node, scope)
 end
 
-interpolate(d::Dict, ex) = ex  # including QuoteNode
-function interpolate(d::Dict, ex::Ex)
+interpolate(ex) = ex  # including QuoteNode
+function interpolate(ex::Ex)
     if is_expr(ex, :$, 1)
-        translate(d, argof(ex, 1))
+        quot(Session.eval(argof(ex, 1)))
     elseif headof(ex) === :quote
         ex
     else
-        expr(headof(ex), {interpolate(d, arg) for arg in ex.args})
+        expr(headof(ex), {interpolate(arg) for arg in ex.args})
     end
 end
 
-translate(d::Dict, ex) = error("translate: unimplemented for ex=$ex")
-translate(d::Dict, ex::Symbol) = has(d, ex) ? quot(d[ex]) : Node(Plain(ex))
 
 end # module
