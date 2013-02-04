@@ -85,16 +85,16 @@ function instrument_args(c::Context, node::ExNode)
         if !is(envof(node), c.env)
             # create new Scope
             syms, e = Set{Symbol}(), envof(node)
-            while !is(e, c.env);  add_each(syms, e.defined); e = e.parent;  end
+            while !is(e, c.env);  add_each!(syms, e.defined); e = e.parent  end
             
             name = gensym("scope")
-            push(args, code_scope(name, c.scope_ex, envof(node), syms))
+            push!(args, code_scope(name, c.scope_ex, envof(node), syms))
             c = Context(c, envof(node), name)
 
             node.introduces_scope = true
         end
     end
-    for arg in argsof(node); push(args, instrument(c, arg)); end
+    for arg in argsof(node); push!(args, instrument(c, arg)); end
     expr(headof(node), args)        
 end
 

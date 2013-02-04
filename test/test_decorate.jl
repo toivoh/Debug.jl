@@ -167,7 +167,7 @@ end
     for x=(a=11; 1:n)
         @syms x [x2]
         x2 = x^2
-        push(z, x2)       
+        push!(z, x2)       
     end
 end
 

@@ -37,8 +37,8 @@ has(env::LocalEnv, sym::Symbol) = has(env.defined,sym) || has(env.parent,sym)
 
 add_defined( ::Env, ::Symbol) = nothing
 add_assigned(::Env, ::Symbol) = nothing
-add_defined( env::LocalEnv, sym::Symbol) = add(env.defined,  sym)
-add_assigned(env::LocalEnv, sym::Symbol) = add(env.assigned, sym)
+add_defined( env::LocalEnv, sym::Symbol) = add!(env.defined,  sym)
+add_assigned(env::LocalEnv, sym::Symbol) = add!(env.assigned, sym)
 
 
 # ---- State: Context for a Node ----------------------------------------------

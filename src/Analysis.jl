@@ -180,7 +180,7 @@ end
 postprocess_env!(envs::Set{LocalEnv}, ::NoEnv) = nothing
 function postprocess_env!(envs::Set{LocalEnv}, env::LocalEnv)
     if has(envs, env); return; end
-    add(envs, env)
+    add!(envs, env)
     p = env.parent
     p_assigned = isa(p, LocalEnv) ? p.assigned : Set{None}()
     env.defined  = env.defined | (env.assigned - p_assigned)

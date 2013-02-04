@@ -41,9 +41,9 @@ $pre:  Dict{Node} of grafts
 
 Example usage:
 -------------
-$(add(bp, n))        # set breakpoint at the current node
-$(del(bp, n))        # unset breakpoint at the current node
-$(add(nobp, n))      # ignore @bp breakpoint at the current node
+$(add!(bp, n))       # set breakpoint at the current node
+$(delete!(bp, n))    # unset breakpoint at the current node
+$(add!(nobp, n))     # ignore @bp breakpoint at the current node
 $(pre[n] = :(x = 0)) # execute x=0 just before the current node, at each visit"
 
 
