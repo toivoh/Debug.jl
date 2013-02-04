@@ -54,8 +54,8 @@ function trap(node, scope::Scope)
     if Flow.pretrap(state, node, scope)
         print("\nat ", node.loc.file, ":", node.loc.line)
         while true
-            print("\ndebug:$(node.loc.line)> "); flush(OUTPUT_STREAM)
-            cmd = readline(stdin_stream)[1:end-1]
+            print("\ndebug:$(node.loc.line)> "); #flush(STDOUT)
+            cmd = readline(STDIN)[1:end-1]
             if cmd == "s";     break
             elseif cmd == "n"; stepover!(state); break
             elseif cmd == "o"; stepout!(state, node, scope);  break
