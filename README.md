@@ -14,6 +14,10 @@ In julia, install the `Debug` package:
 
 Interactive Usage
 -----------------
+First, import the `Debug` package:
+
+    using Debug
+
 Use the `@debug` macro to mark code that you want to be able to step through.
 Use the `@bp` macro to set a breakpoint
 -- interactive debugging will commence at the first breakpoint encountered.
