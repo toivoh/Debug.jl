@@ -8,8 +8,6 @@ Installation
 ------------
 In julia, install the `Debug` package:
 
-    load("pkg.jl")
-    Pkg.init()  # If you haven't done it before
     Pkg.add("Debug")
 
 `Debug` currently requires a julia build from 2012-12-05 or later.
