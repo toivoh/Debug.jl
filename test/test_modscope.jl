@@ -1,6 +1,3 @@
-
-include(find_in_path("Debug.jl"))
-
 module TestModScope
 using Base, Debug
 export trap

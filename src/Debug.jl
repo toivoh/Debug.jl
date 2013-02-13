@@ -3,14 +3,14 @@ module Debug
 using Base
 export @debug, @instrument, @bp, debug_eval, Scope, Node, isblocknode, BPNode
 
-include(find_in_path("Debug/src/AST.jl"))
-include(find_in_path("Debug/src/Meta.jl"))
-include(find_in_path("Debug/src/Analysis.jl"))
-include(find_in_path("Debug/src/Runtime.jl"))
-include(find_in_path("Debug/src/Graft.jl"))
-include(find_in_path("Debug/src/Eval.jl"))
-include(find_in_path("Debug/src/Flow.jl"))
-include(find_in_path("Debug/src/UI.jl"))
+include(Pkg.dir("Debug","src","AST.jl"))
+include(Pkg.dir("Debug","src","Meta.jl"))
+include(Pkg.dir("Debug","src","Analysis.jl"))
+include(Pkg.dir("Debug","src","Runtime.jl"))
+include(Pkg.dir("Debug","src","Graft.jl"))
+include(Pkg.dir("Debug","src","Eval.jl"))
+include(Pkg.dir("Debug","src","Flow.jl"))
+include(Pkg.dir("Debug","src","UI.jl"))
 using AST, Meta, Analysis, Graft, Eval, Flow, UI
 
 is_trap(::Event)    = false

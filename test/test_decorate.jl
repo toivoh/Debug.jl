@@ -1,5 +1,3 @@
-include(find_in_path("Debug.jl"))
-
 module TestDecorate
 export @syms, @noenv, @test_decorate
 using Base, Debug.AST, Debug.Meta, Debug.Analysis

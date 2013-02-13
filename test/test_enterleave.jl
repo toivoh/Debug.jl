@@ -1,6 +1,3 @@
-
-include(find_in_path("Debug.jl"))
-
 module TestTrap
 import Debug
 using Base, Debug, Debug.AST, Debug.Meta

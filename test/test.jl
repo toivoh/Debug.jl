@@ -1,4 +1,4 @@
-include(find_in_path("Debug.jl"))
+#include(find_in_path("Debug.jl"))
 
 module TestInteractive
 using Base, Debug

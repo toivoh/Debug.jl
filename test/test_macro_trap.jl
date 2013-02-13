@@ -1,5 +1,3 @@
-include(find_in_path("Debug.jl"))
-
 module TestMacroTrap
 using Base, Debug
 
