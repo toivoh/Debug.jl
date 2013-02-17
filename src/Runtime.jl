@@ -4,7 +4,7 @@
 # Scope data type used at runtime
 
 module Runtime
-using Base, AST, Meta
+using AST, Meta
 import Base.ref, Base.assign, Base.has, Base.isequal
 export Scope, ModuleScope, LocalScope, getter, setter, get_eval
 export Frame, parent_frame, enclosing_scope_frame, scope_frameof

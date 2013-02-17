@@ -4,7 +4,6 @@
 # Extensions to the julia AST format shared by decorate, instrument, and graft
 
 module AST
-using Base
 import Base.has, Base.show, Base.isequal, Base.promote_rule
 
 export Env, LocalEnv, NoEnv, child
