@@ -5,7 +5,7 @@
 # were evaluated inside such code (grafting)
 
 module Graft
-using Base, AST, Meta, Analysis, Runtime
+using AST, Meta, Analysis, Runtime
 export instrument, graft
 
 
