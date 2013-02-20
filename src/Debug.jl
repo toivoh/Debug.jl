@@ -1,6 +1,5 @@
 
 module Debug
-using Base
 export @debug, @instrument, @bp, debug_eval, Scope, Node, isblocknode, BPNode
 
 include(Pkg.dir("Debug","src","AST.jl"))
@@ -11,7 +10,7 @@ include(Pkg.dir("Debug","src","Graft.jl"))
 include(Pkg.dir("Debug","src","Eval.jl"))
 include(Pkg.dir("Debug","src","Flow.jl"))
 include(Pkg.dir("Debug","src","UI.jl"))
-using AST, Meta, Analysis, Graft, Eval, Flow, UI
+using AST, Debug.Meta, Analysis, Graft, Eval, Flow, UI
 
 is_trap(::Event)    = false
 is_trap(::LocNode)  = false

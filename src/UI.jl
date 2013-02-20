@@ -4,7 +4,7 @@
 # Interactive debug trap
 
 module Session
-using Base, Debug
+using Debug
 import Flow.DBState
 
 const st   = DBState()
@@ -16,7 +16,7 @@ end # module
 
 
 module UI
-using Base, Meta, AST, Eval, Flow
+using Debug.Meta, AST, Eval, Flow
 import Session
 export trap
 

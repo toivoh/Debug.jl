@@ -4,7 +4,7 @@
 # eval in debug scope
 
 module Eval
-using Base, AST, Runtime, Graft
+using AST, Runtime, Graft
 export debug_eval, Scope
 
 debug_eval(scope::ModuleScope, ex) = scope.eval(ex)
