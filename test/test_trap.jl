@@ -1,5 +1,6 @@
 module TestTrap
-using Base, Debug
+using Debug
+import Debug.Scope, Debug.Node, Debug.@instrument
 
 firstline = -1
 function trap(node::Node, scope::Scope)

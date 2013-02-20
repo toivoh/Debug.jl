@@ -1,7 +1,6 @@
-#include(find_in_path("Debug.jl"))
 
 module TestInteractive
-using Base, Debug
+using Debug
 
 println(Debug.UI.helptext)
 println()

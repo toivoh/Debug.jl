@@ -1,7 +1,7 @@
 module TestGraft
 export @syms
-using Base, Debug, Debug.AST, Debug.Eval
-import Debug.AST.is_emittable
+using Debug, Debug.AST, Debug.Eval
+import Debug.AST.is_emittable, Debug.@instrument
 export cut_grafts, @test_graft
 
 macro assert_fails(ex)

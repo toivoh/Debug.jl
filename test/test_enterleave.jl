@@ -1,6 +1,7 @@
 module TestTrap
 import Debug
-using Base, Debug, Debug.AST, Debug.Meta
+using Debug, Debug.AST, Debug.Meta
+import Debug.Node, Debug.Scope
 
 is_trap(::Node) = false
 is_trap(node::ExNode) = isblocknode(parentof(node))

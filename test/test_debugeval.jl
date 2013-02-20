@@ -1,5 +1,6 @@
 module TestDebugEval
-using Base, Debug
+using Debug
+import Debug.Node, Debug.Scope, Debug.@instrument, Debug.debug_eval
 
 firstline = -1
 function trap(node::Node, scope::Scope) 

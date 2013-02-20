@@ -1,5 +1,6 @@
 module TestModScope
-using Base, Debug
+using Debug
+import Debug.BPNode, Debug.Node, Debug.Scope, Debug.debug_eval
 export trap
 
 trap(node::BPNode, scope::Scope) = (global firstline = node.loc.line)
@@ -15,7 +16,8 @@ function trap(node::Node, scope::Scope)
 end
 
 module Mod
-using Base, Debug, TestModScope
+using Debug, TestModScope
+import Debug.@instrument
 @instrument trap begin
     @bp             # 1
     x, y, z = 1, 2, 3

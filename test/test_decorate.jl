@@ -1,6 +1,6 @@
 module TestDecorate
 export @syms, @noenv, @test_decorate
-using Base, Debug.AST, Debug.Meta, Debug.Analysis
+using Debug.AST, Debug.Meta, Debug.Analysis
 
 macro assert_fails(ex)
     quote

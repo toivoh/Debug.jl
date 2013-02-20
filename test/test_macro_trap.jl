@@ -1,5 +1,6 @@
 module TestMacroTrap
-using Base, Debug
+using Debug
+import Debug.Node, Debug.@instrument, Debug.Scope, Debug.BPNode
 
 trap(::Node, ::Scope) = nothing
 function trap(::BPNode, scope::Scope)

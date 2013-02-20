@@ -1,5 +1,6 @@
 module TestStep
-using Base, Debug, Debug.Flow
+using Debug, Debug.Flow
+import Debug.BPNode, Debug.Scope
 
 state = DBState()
 ip    = 1

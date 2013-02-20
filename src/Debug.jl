@@ -1,6 +1,7 @@
 
 module Debug
-export @debug, @instrument, @bp, debug_eval, Scope, Node, isblocknode, BPNode
+# It seems that @instrument has to be exported in order not to be deleted
+export @debug, @bp, @instrument
 
 include(Pkg.dir("Debug","src","AST.jl"))
 include(Pkg.dir("Debug","src","Meta.jl"))
