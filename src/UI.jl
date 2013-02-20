@@ -64,7 +64,7 @@ function trap(node, scope::Scope)
             elseif cmd == "h"; println(helptext)
             else
                 try
-                    ex0, nc = parse(cmd)
+                    ex0 = parse(cmd)
                     Session.eval(:( (n,s)=$(quot((node,scope))) ))
                     ex = interpolate(ex0)
                     r = debug_eval(scope, ex)
