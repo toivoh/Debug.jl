@@ -29,6 +29,7 @@ is_function(node)     = false
 is_function(node::Ex) = is_expr(node, [:function, :->], 2) ||
     (is_expr(node, :(=), 2) && is_expr(argof(node,1), :call))
 
+const typed_dict               = symbol("typed-dict")
 const dict_comprehension       = symbol("dict-comprehension")
 const typed_comprehension      = symbol("typed-comprehension")
 const typed_dict_comprehension = symbol("typed-dict-comprehension")

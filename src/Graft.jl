@@ -6,6 +6,7 @@
 
 module Graft
 using AST, Debug.Meta, Analysis, Runtime
+import Debug.Meta
 export instrument, graft
 
 
@@ -34,13 +35,12 @@ function code_getset(sym::Symbol)
     val = gensym(string(sym))
     :( ()->$sym, $val->($sym=$val) )
 end
-const typed_dict = symbol("typed-dict")
 function code_scope(scopesym::Symbol, parent, env::Env, syms)
     pairs = {expr(:(=>), quot(sym), code_getset(sym)) for sym in syms}
     :(local $scopesym = $(quot(LocalScope))(
         $parent, 
-        $(expr(typed_dict, :($(quot(Symbol))=>$(quot((Function,Function)))), 
-            pairs...)),
+        $(expr(Meta.typed_dict,
+               :($(quot(Symbol))=>$(quot((Function,Function)))), pairs...)),
         $(quot(env))
     ))
 end
