@@ -19,7 +19,6 @@ is_file_linenumber(ex)            = is_expr(ex, :line, 2)
 
 get_linenumber(ex::Ex)             = argof(ex,1)
 get_linenumber(ex::LineNumberNode) = ex.line
-get_sourcefile(ex::Ex)             = string(argof(ex,2))
 
 
 # ---- wrap(): add scoping info to AST ------------------------------------
@@ -158,7 +157,7 @@ function set_source!(ex::ExNode, locex, line, file)
     for arg in argsof(ex)
         if isa(arg, LocNode) 
             line = arg.loc.line #valueof(arg).line
-            if arg.loc.file != "";  file = arg.loc.file;  end
+            if arg.loc.file != empty_symbol;  file = arg.loc.file;  end
         end
         set_source!(arg, locex, line, file)
         locex = isa(arg, LocNode) ? arg.loc : nothing
@@ -193,7 +192,7 @@ analyze(ex, process_envs::Bool) = analyze(Rhs(NoEnv()), ex, process_envs)
 analyze(env::Env, ex, process_envs::Bool) = analyze(Rhs(env), ex, process_envs)
 function analyze(s::State, ex, process_envs::Bool)
     node = wrap(s, ex)
-    set_source!(node, nothing, -1, "")
+    set_source!(node, nothing, -1, empty_symbol)
     if process_envs; postprocess_env!(Set{LocalEnv}(), node); end
     node
 end

@@ -8,6 +8,7 @@ import Base.has, Base.show, Base.isequal, Base.promote_rule
 
 export Env, LocalEnv, NoEnv, child
 export State, SimpleState, Def, Lhs, Rhs
+export empty_symbol
 export Loc, Plain, ExValue, Location
 export Node, ExNode, PLeaf, SymNode, LocNode
 export is_emittable, is_evaluable
@@ -53,9 +54,10 @@ type Rhs <: SimpleState;  env::Env;  end  # plain evaluation
 
 # ---- Node: decorated AST node format ----------------------------------------
 
-type Loc;   ex; line::Int; file::String;  end
-Loc(ex, line, file) = Loc(ex, line, string(file))
-Loc(ex, line)       = Loc(ex, line, "")
+const empty_symbol = symbol("")
+
+type Loc;   ex; line::Int; file::Symbol;  end
+Loc(ex, line)       = Loc(ex, line, empty_symbol)
 
 type Node{T}
     value::T
