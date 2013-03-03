@@ -28,6 +28,8 @@ s: step into
 n: step over any enclosed scope
 o: step out from the current scope
 c: continue to next breakpoint
+l [n]: list n source lines above and below current line (default n = 3)
+p cmd: print cmd evaluated in current scope
 q: quit debug session (calls error(\"interrupted\"))
 To e.g. evaluate the variable named `n`, enter it as ` n` (with a space).
 
@@ -67,21 +69,16 @@ function trap(node, scope::Scope)
             elseif cmd == "l"; print_context(ndfile, ndline, 5)
             elseif ismatch(r"l ([0-9])", cmd)
                 # Inefficient to match twice, but hack for now
-                # This doesn't work right now b/c I couldn't convert the
-                # captured digit to an int...
                 mm = match(r"l ([0-9])",cmd)
                 print_context(ndfile, ndline, parse_int(mm.captures[1]))
+            elseif ismatch(r"p (.*)", cmd)
+                mm = match(r"p (.*)", cmd)
+                mm.captures[1]
+                eval_in_scope(mm.captures[1], node, scope)
             elseif cmd == "h"; println(helptext)
+            # Unrecognized command, so just try to evaluate
             else
-                try
-                    ex0 = parse(cmd)
-                    Session.eval(:( (n,s)=$(quot((node,scope))) ))
-                    ex = interpolate(ex0)
-                    r = debug_eval(scope, ex)
-                    if !is(r, nothing); show(r); println(); end
-                catch e
-                    println(e)
-                end
+                eval_in_scope(cmd, node, scope)
             end
             print("debug:$(ndline)> "); #flush(STDOUT)
         end
@@ -97,6 +94,18 @@ function interpolate(ex::Ex)
         ex
     else
         expr(headof(ex), {interpolate(arg) for arg in ex.args})
+    end
+end
+
+function eval_in_scope(line::String, node, scope)
+    try
+        ex0 = parse(line)
+        Session.eval(:( (n,s)=$(quot((node,scope))) ))
+        ex = interpolate(ex0)
+        r = debug_eval(scope, ex)
+        if !is(r, nothing); show(r); println(); end
+    catch e
+        println(e)
     end
 end
 
@@ -123,6 +132,5 @@ function print_context(path::String, line::Int, nsurr::Int)
         # Don't do anything for now
     end
 end
-
 
 end # module
