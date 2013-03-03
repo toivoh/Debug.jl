@@ -52,15 +52,25 @@ instrument(ex) = Flow.instrument(trap, ex)
 function trap(node, scope::Scope)
     state = Session.st
     if Flow.pretrap(state, node, scope)
-        print("\nat ", node.loc.file, ":", node.loc.line)
+        #println("\nat ", node.loc.file, ":", node.loc.line, "\n")
+        ndfile = string(node.loc.file)
+        ndline = node.loc.line
+        print_context(ndfile, ndline, 1)
+        print("debug:$(ndline)> "); #flush(STDOUT)
         while true
-            print("\ndebug:$(node.loc.line)> "); #flush(STDOUT)
             cmd = readline(STDIN)[1:end-1]
             if cmd == "s";     break
             elseif cmd == "n"; stepover!(state); break
             elseif cmd == "o"; stepout!(state, node, scope);  break
             elseif cmd == "c"; continue!(state); break
             elseif cmd == "q"; continue!(state); error("interrupted")
+            elseif cmd == "l"; print_context(ndfile, ndline, 5)
+            elseif ismatch(r"l ([0-9])", cmd)
+                # Inefficient to match twice, but hack for now
+                # This doesn't work right now b/c I couldn't convert the
+                # captured digit to an int...
+                mm = match(r"l ([0-9])",cmd)
+                print_context(ndfile, ndline, parse_int(mm.captures[1]))
             elseif cmd == "h"; println(helptext)
             else
                 try
@@ -73,6 +83,7 @@ function trap(node, scope::Scope)
                     println(e)
                 end
             end
+            print("debug:$(ndline)> "); #flush(STDOUT)
         end
     end
     Flow.posttrap(state, node, scope)
@@ -86,6 +97,30 @@ function interpolate(ex::Ex)
         ex
     else
         expr(headof(ex), {interpolate(arg) for arg in ex.args})
+    end
+end
+
+function print_context(path::String, line::Int, nsurr::Int)
+    println("\nat ", path, ":", line, "\n")  # Double newlines intentional
+    try
+        src = readlines(open(string(path)))
+        # This is cooler, but probably slower
+        #src = open(string(path)) do f
+        #    readlines(f)
+        #end
+        startl = max(1, line-nsurr)
+        endl = min(length(src), line+nsurr)
+        #println("\nstartl: $startl, endl: $endl")
+        for li in startl:endl
+            if li == line
+                print("$(li)  -->  $(src[li])")
+            else
+                print("$(li)       $(src[li])")
+            end
+        end
+        print("\n")
+    catch err
+        # Don't do anything for now
     end
 end
 
