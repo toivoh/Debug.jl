@@ -121,13 +121,8 @@ function print_context(path::String, line::Int, nsurr::Int)
         endl = min(length(src), line+nsurr)
         #println("\nstartl: $startl, endl: $endl")
         for li in startl:endl
-            #print((li == line) ? " --> " : "    ")
-            #@printf("%-4i %s",li,src[li])
-            if li == line
-                print("$(li)  -->  $(src[li])")
-            else
-                print("$(li)       $(src[li])")
-            end
+            print((li == line) ? " --> " : "     ")
+            @printf(" %-4i %s",li,src[li])
         end
         print("\n")
     catch err
