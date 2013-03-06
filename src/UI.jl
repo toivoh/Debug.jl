@@ -58,7 +58,7 @@ function trap(node, scope::Scope)
         ndfile = string(node.loc.file)
         ndline = node.loc.line
         print_context(ndfile, ndline, 1)
-        print("debug:$(ndline)> "); #flush(STDOUT)
+        print("debug:", ndline, "> "); #flush(STDOUT)
         while true
             cmd = readline(STDIN)[1:end-1]
             if cmd == "s";     break
@@ -67,9 +67,9 @@ function trap(node, scope::Scope)
             elseif cmd == "c"; continue!(state); break
             elseif cmd == "q"; continue!(state); error("interrupted")
             elseif cmd == "l"; print_context(ndfile, ndline, 5)
-            elseif ismatch(r"l ([0-9])", cmd)
+            elseif ismatch(r"l ([0-9]+)", cmd)
                 # Inefficient to match twice, but hack for now
-                mm = match(r"l ([0-9])",cmd)
+                mm = match(r"l ([0-9]+)",cmd)
                 print_context(ndfile, ndline, parse_int(mm.captures[1]))
             elseif ismatch(r"p (.*)", cmd)
                 mm = match(r"p (.*)", cmd)
@@ -80,7 +80,7 @@ function trap(node, scope::Scope)
             else
                 eval_in_scope(cmd, node, scope)
             end
-            print("debug:$(ndline)> "); #flush(STDOUT)
+            print("debug:", ndline, "> "); #flush(STDOUT)
         end
     end
     Flow.posttrap(state, node, scope)
@@ -110,7 +110,7 @@ function eval_in_scope(line::String, node, scope)
 end
 
 function print_context(path::String, line::Int, nsurr::Int)
-    println("\nat ", path, ":", line, "\n")  # Double newlines intentional
+    print("\nat ", path, ":", line, "\n\n")  # Double newlines intentional
     try
         src = readlines(open(string(path)))
         # This is cooler, but probably slower
@@ -121,6 +121,8 @@ function print_context(path::String, line::Int, nsurr::Int)
         endl = min(length(src), line+nsurr)
         #println("\nstartl: $startl, endl: $endl")
         for li in startl:endl
+            #print((li == line) ? " --> " : "    ")
+            #@printf("%-4i %s",li,src[li])
             if li == line
                 print("$(li)  -->  $(src[li])")
             else
@@ -129,7 +131,7 @@ function print_context(path::String, line::Int, nsurr::Int)
         end
         print("\n")
     catch err
-        # Don't do anything for now
+        print("No context available!\n")
     end
 end
 
