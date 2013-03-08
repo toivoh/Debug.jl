@@ -26,7 +26,7 @@ There is also a conditional version, e.g. `@bp x>0` will break only when x>0.
 since it needs access to all
 scopes that surround a piece of code to be analyzed.
 
-The following single-character commands have special meaing:   
+The following single-character commands have special meaning:   
 `h`: display help text   
 `s`: step into   
 `n`: step over any enclosed scope   
