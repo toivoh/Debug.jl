@@ -32,6 +32,8 @@ The following single-character commands have special meaing:
 `n`: step over any enclosed scope   
 `o`: step out from the current scope   
 `c`: continue to next breakpoint   
+`l [n]`: list `n` source lines above and below current line, if source file information is available at this point (default `n = 3`)
+`p cmd`: print `cmd` evaluated in current scope
 `q`: quit debug session (calls `error("interrupted")`)   
 Anything else is parsed and evaluated in the current scope.
 To e.g. evaluate a variable named `n`, it can be entered with
