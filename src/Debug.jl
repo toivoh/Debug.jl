@@ -1,7 +1,5 @@
 
 module Debug
-# It seems that @instrument has to be exported in order not to be deleted
-export @debug, @bp, @instrument
 
 include(Pkg.dir("Debug","src","AST.jl"))
 include(Pkg.dir("Debug","src","Meta.jl"))
@@ -12,6 +10,9 @@ include(Pkg.dir("Debug","src","Eval.jl"))
 include(Pkg.dir("Debug","src","Flow.jl"))
 include(Pkg.dir("Debug","src","UI.jl"))
 using AST, Debug.Meta, Analysis, Graft, Eval, Flow, UI
+
+# It seems that @instrument has to be exported in order not to be deleted
+export @debug, @bp, @instrument
 
 is_trap(::Event)    = false
 is_trap(::LocNode)  = false
