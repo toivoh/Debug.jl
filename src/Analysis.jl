@@ -73,6 +73,8 @@ decorate(s::Def,         ex::Symbol) = (AST.add_defined( s.env, ex); ex)
 decorate(s::Lhs,         ex::Symbol) = (AST.add_assigned(s.env, ex); ex)
 decorate(s::SimpleState, ex::Symbol) = ex
 
+decorate(::Nonsyntax, ex::Ex) = Plain(ex)
+
 # Sig: (part of) function signature in function f(x) ... / f(x) = ...
 type Sig <: State; 
     s::SimpleState;  # state with outer Env, to define/assign f
@@ -127,7 +129,8 @@ function argstates(state::SimpleState, ex)
     # I'm guessing abstract and typealias wrap their args in one scope,
     # except the actual name to be defined
     elseif head === :abstract; c=child(ex, e); [SplitDef(e,c)]
-    elseif head === :type;     c=child(ex, e); [SplitDef(e,c), Rhs(TypeEnv(c))]
+    elseif head === :type;     c=child(ex, e); [fill(Nonsyntax(), nargs-2),
+                                                SplitDef(e,c), Rhs(TypeEnv(c))]
     elseif head === :typealias;c=child(ex, e); [SplitDef(e,c), Rhs(c)]
 
     else fill(Rhs(e), nargs)

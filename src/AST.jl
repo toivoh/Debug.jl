@@ -7,7 +7,7 @@ module AST
 import Base.has, Base.show, Base.isequal, Base.promote_rule
 
 export Env, LocalEnv, NoEnv, child
-export State, SimpleState, Def, Lhs, Rhs
+export State, SimpleState, Def, Lhs, Rhs, Nonsyntax
 export empty_symbol
 export Loc, Plain, ExValue, Location
 export Node, ExNode, PLeaf, SymNode, LocNode
@@ -50,6 +50,8 @@ abstract SimpleState <: State
 type Def <: SimpleState;  env::Env;  end  # definition, e.g. inside local
 type Lhs <: SimpleState;  env::Env;  end  # e.g. to the left of =
 type Rhs <: SimpleState;  env::Env;  end  # plain evaluation
+
+type Nonsyntax <: State; end
 
 
 # ---- Node: decorated AST node format ----------------------------------------
