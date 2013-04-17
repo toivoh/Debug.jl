@@ -1,8 +1,8 @@
 module TestGraft
 export @syms
 using Debug, Debug.AST, Debug.Eval
-import Debug.AST.is_emittable, Debug.@instrument
-export cut_grafts, @test_graft
+import Debug.AST.is_emittable, Debug.@instrument, Debug.Meta.quot
+export @test_graft
 
 macro assert_fails(ex)
     quote
@@ -16,10 +16,18 @@ type Graft; ex; end
 is_emittable(::Node{Graft}) = false
 
 trap(::Any, ::Scope) = nothing
-trap(g::Node{Graft}, scope::Scope) = debug_eval(scope, valueof(g).ex)
+function trap(g::Node{Plain}, scope::Scope)
+    g = exof(g)
+    if isa(g, QuoteNode)
+        g = g.value
+        if isa(g, Node{Graft})
+            debug_eval(scope, valueof(g).ex)
+        end
+    end
+end
 
 macro graft(ex)
-    Node(Graft(ex))
+    quot(Node(Graft(ex)))
 end
 macro test_graft(ex)
     :(@instrument trap $(esc(ex)))
