@@ -4,7 +4,7 @@
 # Scoping analysis used to support instrument and graft
 
 module Analysis
-using AST, Debug.Meta
+using Debug.AST, Debug.Meta
 
 export analyze
 

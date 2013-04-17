@@ -9,7 +9,8 @@ include(Pkg.dir("Debug","src","Graft.jl"))
 include(Pkg.dir("Debug","src","Eval.jl"))
 include(Pkg.dir("Debug","src","Flow.jl"))
 include(Pkg.dir("Debug","src","UI.jl"))
-using AST, Debug.Meta, Analysis, Graft, Eval, Flow, UI
+using Debug.AST, Debug.Meta, Debug.Analysis, Debug.Graft, Debug.Eval
+using Debug.Flow, Debug.UI
 
 # It seems that @instrument has to be exported in order not to be deleted
 export @debug, @bp, @instrument

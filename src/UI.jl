@@ -5,7 +5,7 @@
 
 module Session
 using Debug
-import Flow.DBState
+import Debug.Flow.DBState
 
 const st   = DBState()
 const bp   = st.breakpoints
@@ -16,8 +16,8 @@ end # module
 
 
 module UI
-using Debug.Meta, AST, Eval, Flow
-import Session
+using Debug.Meta, Debug.AST, Debug.Eval, Debug.Flow
+import Debug.Session
 export trap
 
 const helptext = 

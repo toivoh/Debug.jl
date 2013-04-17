@@ -5,7 +5,7 @@
 # were evaluated inside such code (grafting)
 
 module Graft
-using AST, Debug.Meta, Analysis, Runtime
+using Debug.AST, Debug.Meta, Debug.Analysis, Debug.Runtime
 import Debug.Meta
 export instrument, graft
 

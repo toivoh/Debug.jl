@@ -4,7 +4,7 @@
 # Metaprogramming tools used throughout the Debug package
 
 module Meta
-using AST
+using Debug.AST
 export Ex, quot, is_expr
 export isblocknode, is_function, is_scope_node, is_in_type, introduces_scope
 export dict_comprehension, typed_comprehension, typed_dict_comprehension
