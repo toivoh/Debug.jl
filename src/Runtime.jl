@@ -24,10 +24,10 @@ type LocalScope <: Scope
 end
 
 has(s::ModuleScope, sym::Symbol) = false
-has(s::LocalScope,  sym::Symbol) = has(s.syms, sym) || has(s.parent, sym)
+has(s::LocalScope,  sym::Symbol) = haskey(s.syms, sym) || has(s.parent, sym)
 
 function get_entry(scope::LocalScope, sym::Symbol)
-    has(scope.syms, sym) ? scope.syms[sym] : get_entry(scope.parent, sym)
+    haskey(scope.syms, sym) ? scope.syms[sym] : get_entry(scope.parent, sym)
 end
 
 getter(scope::LocalScope, sym::Symbol) = get_entry( scope, sym)[1]

@@ -85,7 +85,7 @@ function instrument_args(c::Context, node::ExNode)
         if !is(envof(node), c.env)
             # create new Scope
             syms, e = Set{Symbol}(), envof(node)
-            while !is(e, c.env);  add_each!(syms, e.defined); e = e.parent  end
+            while !is(e, c.env);  union!(syms, e.defined); e = e.parent  end
             
             name = gensym("scope")
             push!(args, code_scope(name, c.scope_ex, envof(node), syms))
@@ -122,7 +122,7 @@ function rawgraft(s::LocalScope, ex::Ex)
         if isa(lhs, SymNode)             # assignment to symbol
             rhs = rawgraft(s, rhs)
             sym = exof(lhs)
-            if has(envof(lhs), sym) || !has(s.env.assigned, sym); return :($sym = $rhs)
+            if has(envof(lhs), sym) || !contains(s.env.assigned, sym); return :($sym = $rhs)
             elseif has(s, sym);   return expr(:call, quot(setter(s,sym)), rhs)
             else; error("No setter in scope found for $(sym)!")
             end
@@ -134,7 +134,7 @@ function rawgraft(s::LocalScope, ex::Ex)
         elseif is_expr(lhs, [:ref, :.]) || isa(lhs, PLeaf)# need no lhs rewrite
         else error("graft: not implemented: $ex")       
         end  
-    elseif has(Analysis.updating_ops, head) && isa(args[1], SymNode)
+    elseif haskey(Analysis.updating_ops, head) && isa(args[1], SymNode)
         # x+=y ==> x=x+y etc.
         op = Analysis.updating_ops[head]
         return rawgraft(s, :( $(args[1]) = ($op)($(args[1]), $(args[2])) ))

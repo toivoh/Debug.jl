@@ -33,7 +33,7 @@ function show(io::IO, env::LocalEnv)
 end
 
 has(env::NoEnv,    sym::Symbol) = false
-has(env::LocalEnv, sym::Symbol) = has(env.defined,sym) || has(env.parent,sym)
+has(env::LocalEnv, sym::Symbol) = contains(env.defined,sym) || has(env.parent,sym)
 
 add_defined( ::Env, ::Symbol) = nothing
 add_assigned(::Env, ::Symbol) = nothing
