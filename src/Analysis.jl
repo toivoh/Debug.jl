@@ -117,7 +117,7 @@ function argstates(state::SimpleState, ex)
     elseif contains(typed_comprehensions, head); c = child(ex, e)
         [Rhs(e), Rhs(c), fill(SplitDef(c,e), nargs-2)]
         
-    elseif has(updating_ops, head); [Lhs(e), Rhs(e)]
+    elseif haskey(updating_ops, head); [Lhs(e), Rhs(e)]
     elseif head === :(=);   [(isa(state,Def) ? state : Lhs(e)), Rhs(e)]
     elseif head === :(<:);  [(isa(state,Def) ? state : Rhs(e)), Rhs(e)]
     elseif head === :tuple; fill(state,  nargs)
@@ -181,12 +181,12 @@ end
 
 postprocess_env!(envs::Set{LocalEnv}, ::NoEnv) = nothing
 function postprocess_env!(envs::Set{LocalEnv}, env::LocalEnv)
-    if has(envs, env); return; end
+    if contains(envs, env); return; end
     add!(envs, env)
     p = env.parent
     p_assigned = isa(p, LocalEnv) ? p.assigned : Set{None}()
-    env.defined  = env.defined | (env.assigned - p_assigned)
-    env.assigned = env.defined | p_assigned
+    env.defined  = union(env.defined, setdiff(env.assigned, p_assigned))
+    env.assigned = union(env.defined, p_assigned)
 end
 
 # ---- analyze(): wrap and then propagate source file info among LocNode's
