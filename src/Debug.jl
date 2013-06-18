@@ -1,14 +1,14 @@
 
 module Debug
 
-include(Pkg.dir("Debug","src","AST.jl"))
-include(Pkg.dir("Debug","src","Meta.jl"))
-include(Pkg.dir("Debug","src","Analysis.jl"))
-include(Pkg.dir("Debug","src","Runtime.jl"))
-include(Pkg.dir("Debug","src","Graft.jl"))
-include(Pkg.dir("Debug","src","Eval.jl"))
-include(Pkg.dir("Debug","src","Flow.jl"))
-include(Pkg.dir("Debug","src","UI.jl"))
+include("AST.jl")
+include("Meta.jl")
+include("Analysis.jl")
+include("Runtime.jl")
+include("Graft.jl")
+include("Eval.jl")
+include("Flow.jl")
+include("UI.jl")
 using Debug.AST, Debug.Meta, Debug.Analysis, Debug.Graft, Debug.Eval
 using Debug.Flow, Debug.UI
 
