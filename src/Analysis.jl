@@ -129,7 +129,7 @@ function argstates(state::SimpleState, ex)
     # I'm guessing abstract and typealias wrap their args in one scope,
     # except the actual name to be defined
     elseif head === :abstract; c=child(ex, e); [SplitDef(e,c)]
-    elseif head === :type;     c=child(ex, e); [fill(Nonsyntax(), nargs-2),
+    elseif head === :type;     c=child(ex, e); [Nonsyntax(),
                                                 SplitDef(e,c), Rhs(TypeEnv(c))]
     elseif head === :typealias;c=child(ex, e); [SplitDef(e,c), Rhs(c)]
 
