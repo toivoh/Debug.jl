@@ -40,7 +40,7 @@ function rebuild(node::Node)
                 if !(env.defined == benv.defined)
                     error("env.defined = $(env.defined) != $(benv.defined)")
                 end
-                just_assigned = env.assigned - env.defined
+                just_assigned = setdiff(env.assigned, env.defined)
                 if !(just_assigned == benv.assigned)
                     error("just_assigned = $(just_assigned) != $(benv.assigned)")
                 end
@@ -48,9 +48,9 @@ function rebuild(node::Node)
                 @assert isa(env, NoEnv)
             end
         end
-        expr(:block, {rebuild(arg) for arg in argsof(node)})
+        Expr(:block, {rebuild(arg) for arg in argsof(node)}...)
     elseif isa(node, ExNode)
-        expr(headof(node), {rebuild(arg) for arg in argsof(node)})
+        Expr(headof(node), {rebuild(arg) for arg in argsof(node)}...)
     else
         exof(node)
     end

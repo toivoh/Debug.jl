@@ -36,22 +36,22 @@ function code_getset(sym::Symbol)
     :( ()->$sym, $val->($sym=$val) )
 end
 function code_scope(scopesym::Symbol, parent, env::Env, syms)
-    pairs = {expr(:(=>), quot(sym), code_getset(sym)) for sym in syms}
+    pairs = {Expr(:(=>), quot(sym), code_getset(sym)) for sym in syms}
     :(local $scopesym = $(quot(LocalScope))(
         $parent, 
-        $(expr(Meta.typed_dict,
+        $(Expr(Meta.typed_dict,
                :($(quot(Symbol))=>$(quot((Function,Function)))), pairs...)),
         $(quot(env))
     ))
 end
 
 
-code_trap(c::Context, node) = expr(:call, c.trap_ex, quot(node), c.scope_ex)
+code_trap(c::Context, node) = Expr(:call, c.trap_ex, quot(node), c.scope_ex)
 code_trap_if(c::Context,node) = c.trap_pred(node) ? code_trap(c,node) : nothing
 
 function instrument(c::Context, node::Node)
     if isa(node.state, Rhs) && !is_in_type(node) && c.trap_pred(node)
-        expr(:block, code_trap(c, node), 
+        Expr(:block, code_trap(c, node), 
              is_emittable(node) ? instrument_node(c, node) : quot(nothing))
     else
         instrument_node(c, node)
@@ -69,7 +69,7 @@ function instrument_node(c::Context, node::Node)
         enter, leave = code_trap_if(c,Enter(node)), code_trap_if(c,Leave(node))
         if is_function(node)
             @assert is_function(ex)
-            expr(ex.head, ex.args[1], code_enterleave(enter,ex.args[2],leave))
+            Expr(ex.head, ex.args[1], code_enterleave(enter,ex.args[2],leave))
         else
             code_enterleave(enter, ex, leave)
         end
@@ -95,7 +95,7 @@ function instrument_args(c::Context, node::ExNode)
         end
     end
     for arg in argsof(node); push!(args, instrument(c, arg)); end
-    expr(headof(node), args)        
+    Expr(headof(node), args...)
 end
 
 
@@ -113,7 +113,7 @@ rawgraft(s::LocalScope, ex)         = ex
 rawgraft(s::LocalScope, node::Node) = exof(node)
 function rawgraft(s::LocalScope, ex::SymNode)
     sym = exof(ex)
-    (has(s,sym) && !has(envof(ex),sym)) ? expr(:call,quot(getter(s,sym))) : sym
+    (has(s,sym) && !has(envof(ex),sym)) ? Expr(:call,quot(getter(s,sym))) : sym
 end
 function rawgraft(s::LocalScope, ex::Ex)
     head, args = headof(ex), argsof(ex)
@@ -123,12 +123,12 @@ function rawgraft(s::LocalScope, ex::Ex)
             rhs = rawgraft(s, rhs)
             sym = exof(lhs)
             if has(envof(lhs), sym) || !contains(s.env.assigned, sym); return :($sym = $rhs)
-            elseif has(s, sym);   return expr(:call, quot(setter(s,sym)), rhs)
+            elseif has(s, sym);   return Expr(:call, quot(setter(s,sym)), rhs)
             else; error("No setter in scope found for $(sym)!")
             end
         elseif is_expr(lhs, :tuple)  # assignment to tuple
             tup = Node(Plain(gensym("tuple"))) # don't recurse into tup
-            return rawgraft(s, expr(:block,
+            return rawgraft(s, Expr(:block,
                  :($tup  = $rhs    ),
                 {:($dest = $tup[$k]) for (k,dest)=enumerate(argsof(lhs))}...))
         elseif is_expr(lhs, [:ref, :.]) || isa(lhs, PLeaf)# need no lhs rewrite
@@ -139,7 +139,7 @@ function rawgraft(s::LocalScope, ex::Ex)
         op = Analysis.updating_ops[head]
         return rawgraft(s, :( $(args[1]) = ($op)($(args[1]), $(args[2])) ))
     end        
-    expr(head, {rawgraft(s,arg) for arg in args})
+    Expr(head, {rawgraft(s,arg) for arg in args}...)
 end
 
 end # module
