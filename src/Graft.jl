@@ -39,7 +39,7 @@ function code_scope(scopesym::Symbol, parent, env::Env, syms)
     pairs = {Expr(:(=>), quot(sym), code_getset(sym)) for sym in syms}
     :(local $scopesym = $(quot(LocalScope))(
         $parent, 
-        $(Expr(Meta.typed_dict,
+        $(Expr(:typed_dict,
                :($(quot(Symbol))=>$(quot((Function,Function)))), pairs...)),
         $(quot(env))
     ))

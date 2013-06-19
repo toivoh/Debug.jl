@@ -7,7 +7,6 @@ module Meta
 using Debug.AST
 export Ex, quot, is_expr
 export isblocknode, is_function, is_scope_node, is_in_type, introduces_scope
-export dict_comprehension, typed_comprehension, typed_dict_comprehension
 export untyped_comprehensions, typed_comprehensions, comprehensions
 export headof, argsof, argof, nargsof
 
@@ -29,21 +28,9 @@ is_function(node)     = false
 is_function(node::Ex) = is_expr(node, [:function, :->], 2) ||
     (is_expr(node, :(=), 2) && is_expr(argof(node,1), :call))
 
-# Detect whether - or _ is used in heads (changed in Julia/#2393)
-if (:(Int[x for x=1:3])).head == :typed_comprehension
-    const typed_dict               = :typed_dict
-    const dict_comprehension       = :dict_comprehension
-    const typed_comprehension      = :typed_comprehension
-    const typed_dict_comprehension = :typed_dict_comprehension
-else
-    const typed_dict               = symbol("typed-dict")
-    const dict_comprehension       = symbol("dict-comprehension")
-    const typed_comprehension      = symbol("typed-comprehension")
-    const typed_dict_comprehension = symbol("typed-dict-comprehension")
-end
-
-const untyped_comprehensions = [:comprehension, dict_comprehension]
-const typed_comprehensions   = [typed_comprehension, typed_dict_comprehension]
+const untyped_comprehensions = [:comprehension, :dict_comprehension]
+const typed_comprehensions   = [:typed_comprehension, 
+                                :typed_dict_comprehension]
 const comprehensions = [untyped_comprehensions, typed_comprehensions]
 
 const scope_heads = Set(:while, :try, :for, :let, comprehensions...)
