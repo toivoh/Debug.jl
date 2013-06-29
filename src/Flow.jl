@@ -84,7 +84,7 @@ end
 
 posttrap(state::DBState, node, s::Scope) = nothing
 function posttrap(state::DBState, node::Node, s::Scope)
-    if has(state.grafts, node)
+    if haskey(state.grafts, node)
         debug_eval(s, state.grafts[node])
     end
     nothing
