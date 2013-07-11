@@ -93,7 +93,7 @@ function interpolate(ex::Ex)
     elseif headof(ex) === :quote
         ex
     else
-        expr(headof(ex), {interpolate(arg) for arg in ex.args})
+        Expr(headof(ex), {interpolate(arg) for arg in ex.args}...)
     end
 end
 
