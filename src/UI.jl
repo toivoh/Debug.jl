@@ -60,7 +60,7 @@ function trap(node, scope::Scope)
         print_context(ndfile, ndline, 1)
         print("debug:", ndline, "> "); #flush(STDOUT)
         while true
-            cmd = readline(STDIN)[1:end-1]
+            cmd = chomp(readline(STDIN))
             if cmd == "s";     break
             elseif cmd == "n"; stepover!(state); break
             elseif cmd == "o"; stepout!(state, node, scope);  break
