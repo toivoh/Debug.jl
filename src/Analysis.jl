@@ -53,7 +53,7 @@ function wrap(s::SplitDef, ex::Ex)
     head, nargs = headof(ex), nargsof(ex)
     if     head === :(=);   enwrap(s, decorate([Def(s.ls), Rhs(s.rs)], ex))
     elseif head === :(<:);  enwrap(s, decorate([s,         Rhs(s.ls)], ex))
-    elseif head === :curly; enwrap(s, decorate([s, fill(Def(s.rs), nargs-1)], ex))
+    elseif head === :curly; enwrap(s, decorate([s, fill(Def(s.rs), nargs-1)...], ex))
     else                    wrap(Def(s.ls), ex)
     end
 end
@@ -85,7 +85,7 @@ function decorate(s::Sig, ex::Ex)
     if is_expr(argof(ex,1), :curly);first = s
     else;                           first = (isa(s.s,Def) ? s.s : Lhs(s.s.env))
     end
-    states = [first, fill(Def(s.inner), nargsof(ex)-1)]
+    states = [first, fill(Def(s.inner), nargsof(ex)-1)...]
     decorate(states, ex)
 end
 
@@ -113,9 +113,9 @@ function argstates(state::SimpleState, ex)
         nargs === 4 ? [states, Rhs(child(ex,e))] : states
     elseif head === :for; c = child(ex, e);  [SplitDef(c,e), Rhs(c)]
     elseif contains([:let, untyped_comprehensions], head); c = child(ex, e); 
-        [Rhs(c), fill(SplitDef(c,e), nargs-1)]
+        [Rhs(c), fill(SplitDef(c,e), nargs-1)...]
     elseif contains(typed_comprehensions, head); c = child(ex, e)
-        [Rhs(e), Rhs(c), fill(SplitDef(c,e), nargs-2)]
+        [Rhs(e), Rhs(c), fill(SplitDef(c,e), nargs-2)...]
         
     elseif haskey(updating_ops, head); [Lhs(e), Rhs(e)]
     elseif head === :(=);   [(isa(state,Def) ? state : Lhs(e)), Rhs(e)]
