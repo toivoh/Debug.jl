@@ -122,7 +122,7 @@ function rawgraft(s::LocalScope, ex::Ex)
         if isa(lhs, SymNode)             # assignment to symbol
             rhs = rawgraft(s, rhs)
             sym = exof(lhs)
-            if has(envof(lhs), sym) || !contains(s.env.assigned, sym); return :($sym = $rhs)
+            if has(envof(lhs), sym) || !(sym in s.env.assigned); return :($sym = $rhs)
             elseif has(s, sym);   return Expr(:call, quot(setter(s,sym)), rhs)
             else; error("No setter in scope found for $(sym)!")
             end

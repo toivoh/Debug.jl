@@ -76,7 +76,7 @@ function pretrap(state::DBState, e::Leave, s::Scope)
     false
 end
 function pretrap(st::DBState, node::Node, s::Scope)
-    if (isa(node,BPNode)&&!contains(st.ignore_bp,node)) ||  contains(st.breakpoints,node)
+    if (isa(node,BPNode)&&!(node in st.ignore_bp)) || (node in st.breakpoints)
         singlestep!(st)
     end
     does_trap(st.cond)    

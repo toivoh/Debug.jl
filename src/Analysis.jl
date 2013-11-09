@@ -81,7 +81,7 @@ type Sig <: State;
     inner::Env;      # Env inside the method
 end
 function decorate(s::Sig, ex::Ex)
-    @assert contains([:call, :curly], headof(ex))
+    @assert headof(ex) in [:call, :curly]
     if is_expr(argof(ex,1), :curly);first = s
     else;                           first = (isa(s.s,Def) ? s.s : Lhs(s.s.env))
     end
@@ -100,21 +100,21 @@ function argstates(state::SimpleState, ex)
     head, args = headof(ex), argsof(ex)
     e, nargs = state.env, length(args)
 
-    if contains([:function, :(=)], head) && is_expr(args[1], :call)
+    if (head in [:function, :(=)]) && is_expr(args[1], :call)
         if isa(e, TypeEnv); return argstates(Def(raw(e)), ex); end
         c = child(ex, e); [Sig(state, c), Rhs(c)]
-    elseif contains([:function, :(->)], head)
+    elseif head in [:function, :(->)]
         c = child(ex, e); [Def(c),        Rhs(c)]
         
-    elseif contains([:global, :local], head); fill(Def(e), nargs)
+    elseif head in [:global, :local]; fill(Def(e), nargs)
     elseif head === :while;              [Rhs(e),        Rhs(child(ex, e))]
     elseif head === :try
         cc = child(ex,e); states = [Rhs(child(ex,e)), Def(cc),Rhs(cc)]
         nargs === 4 ? [states, Rhs(child(ex,e))] : states
     elseif head === :for; c = child(ex, e);  [SplitDef(c,e), Rhs(c)]
-    elseif contains([:let, untyped_comprehensions], head); c = child(ex, e); 
+    elseif head in [:let, untyped_comprehensions]; c = child(ex, e); 
         [Rhs(c), fill(SplitDef(c,e), nargs-1)...]
-    elseif contains(typed_comprehensions, head); c = child(ex, e)
+    elseif head in typed_comprehensions; c = child(ex, e)
         [Rhs(e), Rhs(c), fill(SplitDef(c,e), nargs-2)...]
         
     elseif haskey(updating_ops, head); [Lhs(e), Rhs(e)]
@@ -140,7 +140,7 @@ end
 function decorate(state::SimpleState, ex::Ex)
     head, args  = headof(ex), argsof(ex)
     if head === :line;                     return Loc(ex, args...)
-    elseif contains([:quote, :top], head); return Plain(ex)
+    elseif head in [:quote, :top]; return Plain(ex)
     elseif head === :macrocall; return decorate(state, macroexpand(ex))
     end
 
@@ -181,8 +181,8 @@ end
 
 postprocess_env!(envs::Set{LocalEnv}, ::NoEnv) = nothing
 function postprocess_env!(envs::Set{LocalEnv}, env::LocalEnv)
-    if contains(envs, env); return; end
-    add!(envs, env)
+    if env in envs; return; end
+    push!(envs, env)
     p = env.parent
     p_assigned = isa(p, LocalEnv) ? p.assigned : Set{None}()
     env.defined  = union(env.defined, setdiff(env.assigned, p_assigned))

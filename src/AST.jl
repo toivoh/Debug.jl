@@ -33,12 +33,12 @@ function show(io::IO, env::LocalEnv)
 end
 
 has(env::NoEnv,    sym::Symbol) = false
-has(env::LocalEnv, sym::Symbol) = contains(env.defined,sym) || has(env.parent,sym)
+has(env::LocalEnv, sym::Symbol) = (sym in env.defined) || has(env.parent,sym)
 
 add_defined( ::Env, ::Symbol) = nothing
 add_assigned(::Env, ::Symbol) = nothing
-add_defined( env::LocalEnv, sym::Symbol) = add!(env.defined,  sym)
-add_assigned(env::LocalEnv, sym::Symbol) = add!(env.assigned, sym)
+add_defined( env::LocalEnv, sym::Symbol) = push!(env.defined,  sym)
+add_assigned(env::LocalEnv, sym::Symbol) = push!(env.assigned, sym)
 
 
 # ---- State: Context for a Node ----------------------------------------------

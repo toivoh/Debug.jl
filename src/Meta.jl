@@ -16,8 +16,8 @@ typealias Ex Union(Expr, ExNode)
 quot(ex) = Expr(:quote, ex)
 
 is_expr(ex::Ex, head)          = headof(ex) === head
-is_expr(ex::Ex, heads::Set)    = contains(heads, headof(ex))
-is_expr(ex::Ex, heads::Vector) = contains(heads, headof(ex))
+is_expr(ex::Ex, heads::Set)    = headof(ex) in heads
+is_expr(ex::Ex, heads::Vector) = headof(ex) in heads
 is_expr(ex,     head)          = false
 is_expr(ex,     head, n::Int)  = is_expr(ex, head) && nargsof(ex) == n
 
