@@ -82,6 +82,14 @@ end
     end
 end
 
+@test_decorate let
+    @syms [f]
+    function f(z, x::Int=1; a=3)
+        @syms z x a [y]
+        y = 0
+    end
+end
+
 @assert_fails @test_decorate let
     @syms
     local x = 3

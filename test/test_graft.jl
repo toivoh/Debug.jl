@@ -101,6 +101,20 @@ end
     @assert t.x == 84
 end
 
+@test_graft begin
+    type TTT
+        x::Int
+        function TTT(x=11; m=1)
+            local z
+            @graft z=m*x
+            new(z)
+        end
+    end
+
+    t = TTT(m=3)
+    @assert t.x == 33
+end
+
 @assert_fails @test_graft let
     @graft a = 3
 end

@@ -105,6 +105,8 @@ function argstates(state::SimpleState, ex)
         c = child(ex, e); [Sig(state, c), Rhs(c)]
     elseif head in [:function, :(->)]
         c = child(ex, e); [Def(c),        Rhs(c)]
+    elseif head in [:kw, :parameters]
+        [(isa(state,Def) ? state : Rhs(e)), Rhs(e)]
         
     elseif head in [:global, :local]; fill(Def(e), nargs)
     elseif head === :while;              [Rhs(e),        Rhs(child(ex, e))]
