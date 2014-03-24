@@ -33,7 +33,7 @@ const typed_comprehensions   = [:typed_comprehension,
                                 :typed_dict_comprehension]
 const comprehensions = [untyped_comprehensions, typed_comprehensions]
 
-const scope_heads = Set(:while, :try, :for, :let, comprehensions...)
+const scope_heads = Set([:while, :try, :for, :let, comprehensions...])
 is_scope_node(ex) = is_expr(ex, scope_heads) || is_function(ex)
 
 # only for Node/Nothing
