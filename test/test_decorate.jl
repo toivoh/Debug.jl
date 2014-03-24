@@ -14,7 +14,7 @@ type BlockEnv
     defined ::Set{Symbol}
     assigned::Set{Symbol}
 
-    BlockEnv(d, a) = new(Set{Symbol}(d...), Set{Symbol}(a...))
+    BlockEnv(d, a) = new(Set{Symbol}(d), Set{Symbol}(a))
 end
 
 macro syms(args...)
