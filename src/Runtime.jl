@@ -46,6 +46,7 @@ type Frame
     scope::Scope
 end
 isequal(f1::Frame, f2::Frame) = (f1.node === f2.node && f1.scope === f2.scope)
+==(f1::Frame, f2::Frame)      = (f1.node === f2.node && f1.scope === f2.scope)
 
 function parent_frame(f::Frame)
     @assert !is_function(f.node)

@@ -84,6 +84,7 @@ end
 Node{T}(value::T, args...) = Node{T}(value, args...)
 
 isequal(x::Node, y::Node)  = isequal(x.value, y.value)
+==(x::Node, y::Node)       = isequal(x.value, y.value)
 show(io::IO, ex::Node) = (print(io,"Node("); show(io,ex.value); print(io,")"))
 
 function set_parent(ex::Node, parent::Node)
