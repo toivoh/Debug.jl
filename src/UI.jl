@@ -105,7 +105,7 @@ function eval_in_scope(line::String, node, scope)
         r = debug_eval(scope, ex)
         if !is(r, nothing); show(r); println(); end
     catch e
-        println(e)
+        showerror(STDOUT, e); println()
     end
 end
 
