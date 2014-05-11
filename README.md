@@ -39,76 +39,127 @@ Anything else is parsed and evaluated in the current scope.
 To e.g. evaluate a variable named `n`, it can be entered with
 a space prepended.
 
-Example:
 
-    julia> @debug let  # line 1
-               parts = {} # 2
-               @bp        # 3
-               for j=1:3  # 4
-                   for i=1:3  # 5
-                       push(parts,"($i,$j) ") # 6
-                   end        # 7
-               end        # 8
-               @bp        # 9
-               println(parts...)
-           end
+### Example ###
 
-    at :3
-    debug:3> j
-    in anonymous: j not defined
- 
-    debug:3> parts
+Put the following in a file called `example.jl`:
+
+    using Debug
+    @debug function test()
+        parts = {}
+        @bp
+        for j=1:3
+            for i=1:3
+                push!(parts,"($i,$j) ")
+            end
+        end
+        @bp
+        println(parts...)
+    end
+    
+    test()
+
+Then, in the Julia terminal:
+
+    julia> include("example.jl")
+    
+    at /home/toivo/.julia/Debug/test/example.jl:4
+    
+          3        parts = {}
+     -->  4        @bp
+          5        for j=1:3
+    
+    debug:4> j
+    j not defined
+    
+    debug:4> parts
     {}
-
-    debug:3> s
-
-    at :4
+    
     debug:4> s
-
-    at :5
+    
+    at /home/toivo/.julia/Debug/test/example.jl:5
+    
+          4        @bp
+     -->  5        for j=1:3
+          6            for i=1:3
+    
     debug:5> s
-
-    at :6
-    debug:6> i
-    1
-
+    
+    at /home/toivo/.julia/Debug/test/example.jl:6
+    
+          5        for j=1:3
+     -->  6            for i=1:3
+          7                push!(parts,"($i,$j) ")
+    
     debug:6> s
-
-    at :6
-    debug:6> i
+    
+    at /home/toivo/.julia/Debug/test/example.jl:7
+    
+          6            for i=1:3
+     -->  7                push!(parts,"($i,$j) ")
+          8            end
+    
+    debug:7> i
+    1
+    
+    debug:7> s
+    
+    at /home/toivo/.julia/Debug/test/example.jl:7
+    
+          6            for i=1:3
+     -->  7                push!(parts,"($i,$j) ")
+          8            end
+    
+    debug:7> i
     2
-
-    debug:6> parts
+    
+    debug:7> parts
     {"(1,1) "}
-
-    debug:6> parts = {}
+    
+    debug:7> parts = {}
     {}
-
-    debug:6> o
-
-    at :5
-    debug:5> j
+    
+    debug:7> o
+    
+    at /home/toivo/.julia/Debug/test/example.jl:6
+    
+          5        for j=1:3
+     -->  6            for i=1:3
+          7                push!(parts,"($i,$j) ")
+    
+    debug:6> j
     2
-
-    debug:5> n
-
-    at :5
-    debug:5> j
+    
+    debug:6> n
+    
+    at /home/toivo/.julia/Debug/test/example.jl:6
+    
+          5        for j=1:3
+     -->  6            for i=1:3
+          7                push!(parts,"($i,$j) ")
+    
+    debug:6> j
     3
-
-    debug:5> push(parts, "foo ")
-    {"(2,1) ", "(3,1) ", "(1,2) ", "(2,2) ", "(3,2) ", "foo "}
-
-    debug:5> c
-
-    at :9
-    debug:9> parts
-    {"(2,1) ", "(3,1) ", "(1,2) ", "(2,2) "  ...  "(1,3) ", "(2,3) ", "(3,3) "}
-
-    debug:9> c
+    
+    debug:6> push!(parts, "foo ")
+    {"(2,1) ","(3,1) ","(1,2) ","(2,2) ","(3,2) ","foo "}
+    
+    debug:6> c
+    
+    at /home/toivo/.julia/Debug/test/example.jl:10
+    
+          9        end
+     -->  10       @bp
+          11       println(parts...)
+    
+    debug:10> parts 
+    {"(2,1) ","(3,1) ","(1,2) ","(2,2) ","(3,2) ","foo ","(1,3) ","(2,3) ","(3,3) "}
+    
+    debug:10> c
     (2,1) (3,1) (1,2) (2,2) (3,2) foo (1,3) (2,3) (3,3) 
+    
+    julia> 
 
-    julia>
 
 Experimental Features
 ---------------------
@@ -128,11 +179,11 @@ represented by nodes in the decorated AST produced from the original code.
 
 Breakpoints can be manipulated using e.g.
 
-    $(add(bp, n))    # set breakpoint at the current node
-    $(del(bp, n))    # unset breakpoint at the current node
-    $(add(nobp, n))  # ignore @bp breakpoint at the current node
+    $(push!(bp, n))    # set breakpoint at the current node
+    $(delete!(bp, n))  # unset breakpoint at the current node
+    $(push!(nobp, n))  # ignore @bp breakpoint at the current node
 
-The above examples can also be written as e.g. `$add($bp, $n)`.   
+The above examples can also be written as e.g. `$push!($bp, $n)`.   
 Code snippets can also be grafted into instrumented code. E.g.
 
     $(pre[n] = :(x = 0))
