@@ -58,7 +58,7 @@ function trap(node, scope::Scope)
         ndfile = string(node.loc.file)
         ndline = node.loc.line
         print_context(ndfile, ndline, 1)
-        print("debug:", ndline, "> "); #flush(STDOUT)
+        print("\ndebug:", ndline, "> "); #flush(STDOUT)
         while true
             cmd = chomp(readline(STDIN))
             if cmd == "s";     break
@@ -80,7 +80,7 @@ function trap(node, scope::Scope)
             else
                 eval_in_scope(cmd, node, scope)
             end
-            print("debug:", ndline, "> "); #flush(STDOUT)
+            print("\ndebug:", ndline, "> "); #flush(STDOUT)
         end
     end
     Flow.posttrap(state, node, scope)
@@ -110,7 +110,7 @@ function eval_in_scope(line::String, node, scope)
 end
 
 function print_context(path::String, line::Int, nsurr::Int)
-    print("\nat ", path, ":", line, "\n\n")  # Double newlines intentional
+    print("\nat ", path, ":", line, "\n")
     try
         src = readlines(open(string(path)))
         # This is cooler, but probably slower
@@ -120,11 +120,11 @@ function print_context(path::String, line::Int, nsurr::Int)
         startl = max(1, line-nsurr)
         endl = min(length(src), line+nsurr)
         #println("\nstartl: $startl, endl: $endl")
+        println()
         for li in startl:endl
             print((li == line) ? " --> " : "     ")
             @printf(" %-4i %s",li,src[li])
         end
-        print("\n")
     catch err
         println("Couldn't display source lines from file \"", path, '"')
     end
