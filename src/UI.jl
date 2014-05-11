@@ -126,7 +126,7 @@ function print_context(path::String, line::Int, nsurr::Int)
         end
         print("\n")
     catch err
-        print("No context available!\n")
+        println("Couldn't display source lines from file \"", path, '"')
     end
 end
 
