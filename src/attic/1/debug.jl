@@ -144,18 +144,18 @@ end
 abstract Scope
 
 type NoScope <: Scope; end
-has(scope::NoScope, sym::Symbol) = false
+haskey(scope::NoScope, sym::Symbol) = false
 
 type LocalScope <: Scope
     parent::Scope
     syms::Dict
 end
 
-function has(scope::LocalScope, sym::Symbol)
-    has(scope.syms, sym) || has(scope.parent, sym)
+function haskey(scope::LocalScope, sym::Symbol)
+    haskey(scope.syms, sym) || haskey(scope.parent, sym)
 end
 function get_entry(scope::LocalScope, sym::Symbol)
-    has(scope.syms, sym) ? scope.syms[sym] : get_entry(scope.parent, sym)
+    haskey(scope.syms, sym) ? scope.syms[sym] : get_entry(scope.parent, sym)
 end
 
 get_getter(scope::LocalScope, sym::Symbol) = get_entry(scope, sym)[1]
@@ -199,7 +199,7 @@ function code_debug(c::CodeDebug, ex::Expr)
     if ex.head === :macrocall; return ex; end  # don't go in there for now
 
     scopes = c.shared.scopes
-    if has(scopes, ex); c = enter(c, ex); end
+    if haskey(scopes, ex); c = enter(c, ex); end
 
     if ex.head === :block || ex.head === :body
         args = {}
@@ -268,7 +268,7 @@ function resym(s::LocalScope, ex::Expr)
     if head === :(=)
         if is_symbol(args[1])
             lhs = get_symbol(args[1])
-            if !has(s, lhs) error("Cannot assign to ($lhs): not in scope.") end
+            if !haskey(s, lhs) error("Cannot assign to ($lhs): not in scope.") end
             setter = get_setter(s, lhs)
             rhs = resym(s, args[2])
             expr(:call, quot(setter), rhs)
@@ -280,7 +280,7 @@ function resym(s::LocalScope, ex::Expr)
         else
             expr(head, {resym(s, arg) for arg in args})
         end
-    elseif has(updating_ops, head) # Translate updating ops, e g x+=1 ==> x=x+1
+    elseif haskey(updating_ops, head) # Translate updating ops, e g x+=1 ==> x=x+1
         op = updating_ops[head]
         resym(s, :( ($args[1]) = ($op)(($args[1]), ($args[2])) ))
     elseif head === :quote || head === :top; ex
@@ -290,7 +290,7 @@ function resym(s::LocalScope, ex::Expr)
 end
 resym(s::LocalScope, node::SymbolNode) = resym(s, node.name)
 function resym(s::LocalScope, ex::Symbol) 
-    has(s, ex) ? :(($quot(get_getter(s, ex)))()) : ex
+    haskey(s, ex) ? :(($quot(get_getter(s, ex)))()) : ex
 end
 resym(s::Scope, ex) = ex
 

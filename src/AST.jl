@@ -4,7 +4,7 @@
 # Extensions to the julia AST format shared by decorate, instrument, and graft
 
 module AST
-import Base.has, Base.show, Base.isequal, Base.promote_rule
+import Base.haskey, Base.show, Base.isequal, Base.promote_rule
 
 export Env, LocalEnv, NoEnv, child
 export State, SimpleState, Def, Lhs, Rhs, Nonsyntax
@@ -32,8 +32,8 @@ function show(io::IO, env::LocalEnv)
     print(io, "LocalEnv(,$(env.parent),$(env.defined),$(env.assigned))")
 end
 
-has(env::NoEnv,    sym::Symbol) = false
-has(env::LocalEnv, sym::Symbol) = (sym in env.defined) || has(env.parent,sym)
+haskey(env::NoEnv,    sym::Symbol) = false
+haskey(env::LocalEnv, sym::Symbol) = (sym in env.defined) || haskey(env.parent,sym)
 
 add_defined( ::Env, ::Symbol) = nothing
 add_assigned(::Env, ::Symbol) = nothing

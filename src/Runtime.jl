@@ -5,7 +5,7 @@
 
 module Runtime
 using Debug.AST, Debug.Meta
-import Base.ref, Base.assign, Base.has, Base.isequal
+import Base: haskey, isequal, getindex, setindex!
 export Scope, ModuleScope, LocalScope, getter, setter, get_eval
 export Frame, parent_frame, enclosing_scope_frame, scope_frameof
 
@@ -23,8 +23,8 @@ type LocalScope <: Scope
     env::Env
 end
 
-has(s::ModuleScope, sym::Symbol) = false
-has(s::LocalScope,  sym::Symbol) = haskey(s.syms, sym) || has(s.parent, sym)
+haskey(s::ModuleScope, sym::Symbol) = false
+haskey(s::LocalScope,  sym::Symbol) = haskey(s.syms, sym) || haskey(s.parent, sym)
 
 function get_entry(scope::LocalScope, sym::Symbol)
     haskey(scope.syms, sym) ? scope.syms[sym] : get_entry(scope.parent, sym)
