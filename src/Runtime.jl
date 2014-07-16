@@ -33,7 +33,7 @@ end
 getter(scope::LocalScope, sym::Symbol) = get_entry( scope, sym)[1]
 setter(scope::LocalScope, sym::Symbol) = get_entry( scope, sym)[2]
 getindex(scope::LocalScope, sym::Symbol) = getter(scope,sym)()
-assign(scope::LocalScope, x,  sym::Symbol) = setter(scope, sym)(x)
+setindex!(scope::LocalScope, x,  sym::Symbol) = setter(scope, sym)(x)
 
 get_eval(scope::ModuleScope) = scope.eval
 get_eval(scope::LocalScope)  = get_eval(scope.parent)

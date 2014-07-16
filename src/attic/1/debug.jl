@@ -161,7 +161,7 @@ end
 get_getter(scope::LocalScope, sym::Symbol) = get_entry(scope, sym)[1]
 get_setter(scope::LocalScope, sym::Symbol) = get_entry(scope, sym)[2]
 getindex(   scope::LocalScope,     sym::Symbol) = get_getter(scope, sym)()
-assign(scope::LocalScope, x,  sym::Symbol) = get_setter(scope, sym)(x)
+setindex!(scope::LocalScope, x,  sym::Symbol) = get_setter(scope, sym)(x)
 
 function code_getset(sym::Symbol)
     val = gensym(string(sym))
