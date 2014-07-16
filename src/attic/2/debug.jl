@@ -210,7 +210,7 @@ function mark_args_pos!(node::INode, pos::Position)
         elseif head === :call
             mark_pos!(args[1], LHS)
             mark_pos!(args[2:end], DEF)            
-        elseif head === :ref
+        elseif head === :getindex
             mark_pos!(args, RHS)
         else
             error("Don't know how to handle $node in pos $pos")

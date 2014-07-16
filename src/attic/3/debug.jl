@@ -164,7 +164,7 @@ function argtraits(h::Exp, nargs::Int, pos::Position)
         elseif head === :(=);   [pos, RHS]
         elseif head === :tuple; [pos]
         elseif head === :call;  [LHS, DEF]
-        elseif head === :ref;   [RHS]
+        elseif head === :getindex;   [RHS]
         else
             error("Don't know how to handle $head in pos $pos")
         end        

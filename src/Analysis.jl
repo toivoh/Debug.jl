@@ -123,7 +123,7 @@ function argstates(state::SimpleState, ex)
     elseif head === :(=);   [(isa(state,Def) ? state : Lhs(e)), Rhs(e)]
     elseif head === :(<:);  [(isa(state,Def) ? state : Rhs(e)), Rhs(e)]
     elseif head === :tuple; fill(state,  nargs)
-    elseif head === :ref;   fill(Rhs(e), nargs)
+    elseif head === :getindex;   fill(Rhs(e), nargs)
     elseif head === :(...); [state]
     elseif head === :(::) && nargs == 1; [Rhs(e)]
     elseif head === :(::) && nargs == 2; [state, Rhs(e)]
