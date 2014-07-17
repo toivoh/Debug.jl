@@ -113,7 +113,7 @@ rawgraft(s::LocalScope, ex)         = ex
 rawgraft(s::LocalScope, node::Node) = exof(node)
 function rawgraft(s::LocalScope, ex::SymNode)
     sym = exof(ex)
-    (has(s,sym) && !has(envof(ex),sym)) ? Expr(:call,quot(getter(s,sym))) : sym
+    (haskey(s,sym) && !haskey(envof(ex),sym)) ? Expr(:call,quot(getter(s,sym))) : sym
 end
 function rawgraft(s::LocalScope, ex::Ex)
     head, args = headof(ex), argsof(ex)
@@ -122,8 +122,8 @@ function rawgraft(s::LocalScope, ex::Ex)
         if isa(lhs, SymNode)             # assignment to symbol
             rhs = rawgraft(s, rhs)
             sym = exof(lhs)
-            if has(envof(lhs), sym) || !(sym in s.env.assigned); return :($sym = $rhs)
-            elseif has(s, sym);   return Expr(:call, quot(setter(s,sym)), rhs)
+            if haskey(envof(lhs), sym) || !(sym in s.env.assigned); return :($sym = $rhs)
+            elseif haskey(s, sym);   return Expr(:call, quot(setter(s,sym)), rhs)
             else; error("No setter in scope found for $(sym)!")
             end
         elseif is_expr(lhs, :tuple)  # assignment to tuple
