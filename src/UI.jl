@@ -70,7 +70,7 @@ function trap(node, scope::Scope)
             elseif ismatch(r"l ([0-9]+)", cmd)
                 # Inefficient to match twice, but hack for now
                 mm = match(r"l ([0-9]+)",cmd)
-                print_context(ndfile, ndline, parse_int(mm.captures[1]))
+                print_context(ndfile, ndline, parseint(mm.captures[1]))
             elseif ismatch(r"p (.*)", cmd)
                 mm = match(r"p (.*)", cmd)
                 mm.captures[1]
