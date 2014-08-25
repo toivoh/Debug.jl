@@ -1,6 +1,6 @@
 Debug.jl v0
 ===========
-Prototype interactive debugger for [julia](julialang.org).
+Prototype interactive debugger for [the Julia language](http://julialang.org).
 Bug reports and feature suggestions are welcome at
 https://github.com/toivoh/Debug.jl/issues.
 
@@ -256,7 +256,7 @@ The `@debug` macro triggers a number of steps:
 
 * The code passed to `@debug` is _analyzed_,
   and turned into a decorated AST built from nodes of type `Debug.AST.Node`.
-  The format is almost identical to julia's native AST format,
+  The format is almost identical to Julia's native AST format,
   but nodes also keep track of
   parent, static scope, and location in the source code.
 * The code is then _instrumented_ to insert trap calls at each stepping point,
@@ -272,7 +272,7 @@ The `@debug` macro triggers a number of steps:
 
 Known Issues
 ------------
-I have tried to encode the scoping rules of julia as accurately as possible,
+I have tried to encode the scoping rules of Julia as accurately as possible,
 but I'm bound to have missed something. Also,
 * The scoping rules for `for` blocks etc. in global scope
   are not quite accurate.
