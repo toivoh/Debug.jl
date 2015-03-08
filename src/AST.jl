@@ -53,6 +53,8 @@ type Rhs <: SimpleState;  env::Env;  end  # plain evaluation
 
 type Nonsyntax <: State; end
 
+envof(s::SimpleState) = s.env
+
 
 # ---- Node: decorated AST node format ----------------------------------------
 
@@ -120,7 +122,7 @@ is_evaluable(::LocNode) = false
 
 parentof(node::Node) = node.parent
 valueof( node::Node) = node.value
-envof(   node::Node) = node.state.env # will only work for SimpleState:s
+envof(   node::Node) = envof(node.state) # will only work State:s with envof
 
 exof(node::SymNode) = valueof(node)
 exof(node::LocNode) = node.loc.ex

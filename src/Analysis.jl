@@ -89,6 +89,14 @@ function decorate(s::Sig, ex::Ex)
     decorate(states, ex)
 end
 
+# SplitState: Expression with different states to be applied for each argument
+type SplitState <: State;
+    env::Env
+    argstates::Vector{State}
+end
+AST.envof(s::SplitState) = s.env
+decorate(s::SplitState, ex::Ex) = decorate(s.argstates, ex)
+
 const updating_ops = {
  :+= => :+,   :-= => :-,  :*= => :*,  :/= => :/,  ://= => ://, :.//= => :.//,
 :.*= => :.*, :./= => :./, :\= => :\, :.\= => :.\,  :^= => :^,   :.^= => :.^,
@@ -113,7 +121,22 @@ function argstates(state::SimpleState, ex)
     elseif head === :try
         cc = child(ex,e); states = [Rhs(child(ex,e)), Def(cc),Rhs(cc)]
         nargs === 4 ? [states, Rhs(child(ex,e))] : states
-    elseif head === :for; c = child(ex, e);  [SplitDef(c,e), Rhs(c)]
+    elseif head === :for
+        if is_expr(args[1], :block)
+            last_c = e
+            states = State[]
+            # Create a nested sequence of environments since each loop
+            # variable can depend on the previous for its definition
+            for child_ex in argsof(args[1])
+                # Is there a better expression to take as ex?
+                c = child(ex, last_c)
+                push!(states, SplitDef(c,last_c))
+                last_c = c
+            end
+            [SplitState(e,states), Rhs(last_c)]
+        else
+            c = child(ex, e); [SplitDef(c,e), Rhs(c)]
+        end
     elseif head in [:let, untyped_comprehensions]; c = child(ex, e); 
         [Rhs(c), fill(SplitDef(c,e), nargs-1)...]
     elseif head in typed_comprehensions; c = child(ex, e)

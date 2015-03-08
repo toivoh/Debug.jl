@@ -173,7 +173,15 @@ end
     for x=(a=11; 1:n)
         @syms x [x2]
         x2 = x^2
-        push!(z, x2)       
+        push!(z, x2)
+    end
+end
+
+# cartesian for
+@test_decorate let
+    @syms
+    for i=1:n, j=(@syms i; 1:i)
+        @syms j
     end
 end
 
