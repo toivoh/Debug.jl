@@ -36,7 +36,7 @@ function code_getset(sym::Symbol)
     :( ()->$sym, $val->($sym=$val) )
 end
 function code_scope(scopesym::Symbol, parent, env::Env, syms)
-    pairs = {Expr(:(=>), quot(sym), code_getset(sym)) for sym in syms}
+    pairs = [Expr(:(=>), quot(sym), code_getset(sym)) for sym in syms]
     :(local $scopesym = $(quot(LocalScope))(
         $parent, 
         $(Expr(:typed_dict,
@@ -80,7 +80,7 @@ end
 
 instrument_args(c::Context, node::Node) = exof(node)
 function instrument_args(c::Context, node::ExNode)
-    args = {}
+    args = Any[]
     if isblocknode(node)
         if !is(envof(node), c.env)
             # create new Scope
@@ -130,7 +130,7 @@ function rawgraft(s::LocalScope, ex::Ex)
             tup = Node(Plain(gensym("tuple"))) # don't recurse into tup
             return rawgraft(s, Expr(:block,
                  :($tup  = $rhs    ),
-                {:($dest = $tup[$k]) for (k,dest)=enumerate(argsof(lhs))}...))
+                [:($dest = $tup[$k]) for (k,dest)=enumerate(argsof(lhs))]...))
         elseif is_expr(lhs, [:ref, :.]) || isa(lhs, PLeaf)# need no lhs rewrite
         else error("graft: not implemented: $ex")       
         end  
@@ -139,7 +139,7 @@ function rawgraft(s::LocalScope, ex::Ex)
         op = Analysis.updating_ops[head]
         return rawgraft(s, :( $(args[1]) = ($op)($(args[1]), $(args[2])) ))
     end        
-    Expr(head, {rawgraft(s,arg) for arg in args}...)
+    Expr(head, [rawgraft(s,arg) for arg in args]...)
 end
 
 end # module

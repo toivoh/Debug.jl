@@ -48,9 +48,9 @@ function rebuild(node::Node)
                 @assert isa(env, NoEnv)
             end
         end
-        Expr(:block, {rebuild(arg) for arg in argsof(node)}...)
+        Expr(:block, [rebuild(arg) for arg in argsof(node)]...)
     elseif isa(node, ExNode)
-        Expr(headof(node), {rebuild(arg) for arg in argsof(node)}...)
+        Expr(headof(node), [rebuild(arg) for arg in argsof(node)]...)
     else
         exof(node)
     end
@@ -201,7 +201,7 @@ end
     end
     let
         @syms [a]
-        {(@syms x y; x*y+z) for x=(@syms [a]; 1:5), y=(a=5; 1:3)}
+        Any[(@syms x y; x*y+z) for x=(@syms [a]; 1:5), y=(a=5; 1:3)]
     end
     let
         @syms [a b]
@@ -217,7 +217,7 @@ end
     end
     let
         @syms [a]
-        {(@syms x y; x*y=>z) for x=(@syms [a]; 1:5), y=(a=5; 1:3)}
+        Any[(@syms x y; x*y=>z) for x=(@syms [a]; 1:5), y=(a=5; 1:3)]
     end
     let
         @syms [a b]

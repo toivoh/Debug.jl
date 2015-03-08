@@ -37,7 +37,7 @@ raw{T<:SimpleState}(s::T) = T(raw(s.env))
 
 
 function wrap(states::Vector, args::Vector) 
-    {wrap(s, arg) for (s, arg) in zip(states, args)}
+    [wrap(s, arg) for (s, arg) in zip(states, args)]
 end
 wrap(s::SimpleState, ex::SymbolNode) = wrap(s, ex.name)
 wrap(s::State, ex) = enwrap(s, decorate(s,ex))
