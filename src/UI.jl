@@ -103,7 +103,10 @@ function eval_in_scope(line::String, node, scope)
         Session.eval(:( (n,s)=$(quot((node,scope))) ))
         ex = interpolate(ex0)
         r = debug_eval(scope, ex)
-        if !is(r, nothing); show(r); println(); end
+        # Try to detect final semicolon. Does not understand comments.
+        if !ismatch(r";\s*\z", line)
+            if !(r === nothing); show(r); println(); end
+        end
     catch e
         showerror(STDOUT, e); println()
     end
