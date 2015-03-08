@@ -70,7 +70,7 @@ type Node{T}
     state::State
     loc::Loc    
     
-    function adopt_args!(node::Node)
+    function adopt_args!{T}(node::Node{T})
         if T <: ExValue
             for arg in node.value.args
                 set_parent(arg, node)
