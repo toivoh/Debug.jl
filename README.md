@@ -1,16 +1,15 @@
-Debug.jl v0
-===========
+Debug.jl v0.1
+=============
 Prototype interactive debugger for [the Julia language](http://julialang.org).
 Bug reports and feature suggestions are welcome at
 https://github.com/toivoh/Debug.jl/issues.
+The package also supports evaluation of expressions in local scope.
 
 Installation
 ------------
 In julia, install the `Debug` package:
 
     Pkg.add("Debug")
-
-`Debug` currently requires a julia build from 2012-12-05 or later.
 
 Interactive Usage
 -----------------
@@ -195,6 +194,81 @@ Other nodes than the current node `$n` could be used
 in the examples above.
 Such nodes can be found by navigating from the current node,
 but the there is not much support for this yet.
+
+Evaluation of code in local scope
+---------------------------------
+By design, the Julia [eval](http://docs.julialang.org/en/latest/stdlib/base/#Base.eval)
+function only allows to evaluate code in global (i.e. module) scope.
+This allows for all kinds of optimizations, e.g. since the compiler can see all
+uses of all local variables.
+
+The `Debug` package needs to be able to evaluate code in local scopes when it
+is entered at the debug prompt however; in fact this is the main functionality
+that the package provides, and can also be used as a standalone feature.
+To evaluation in a local scope, code is instrumented to create `Scope` objects,
+which contain getter and setter functions for each local variable accesible in
+a given scope.
+
+Code wrapped inside the `@debug` macro can retrieve the current scope object
+using the `@localscope` macro. The `@debug_analyze` macro can be used instead
+of `@debug` to allow using `@localscope` with minimal code instrumentation,
+but does not allow stepping through the instrumented code. It only creates
+`Scope` objects when entering scopes where they will be needed by some nested
+`@localscope` invocation.
+
+Once a `Scope` object is available, local variables can be read and assigned
+in it by indexing with the corresponding symbols, and listed using
+`keys(scope)`. Expressions can also be evaluated in a scope using the
+`debug_eval` function:
+
+    using Debug
+    @debug_analyze function f(x)
+        outer = @localscope
+        local inner
+        pos = "outer"
+        let pos = "inner"
+            y = x
+            inner = @localscope
+        end
+        (outer, inner)
+    end
+
+    outer, inner = f(5)
+    
+    @show keys(outer) keys(inner) # y is only present in inner
+
+    println()
+    @show outer[:x] inner[:x]     # x is the same variable in both scopes
+    @show outer[:pos] inner[:pos] # pos refers to different variables in inner and outer
+
+    println("\nSetting `inner[:x] = 3`:")
+    inner[:x] = 3             # assigns to the single variable x
+    @show outer[:x] inner[:x] # both values have been updated
+
+    println()
+    @show debug_eval(inner, :(x*x)) # evaluate an expression in the inner scope
+
+which produces the output
+
+    keys(outer) => Set{Symbol}({:outer,:pos,:inner,:x})
+    keys(inner) => Set{Symbol}({:outer,:pos,:inner,:x,:y})
+
+    outer[:x] => 5
+    inner[:x] => 5
+    outer[:pos] => "outer"
+    inner[:pos] => "inner"
+
+    Setting `inner[:x] = 3`:
+    outer[:x] => 3
+    inner[:x] => 3
+
+    debug_eval(inner,:(x * x)) => 9
+
+As seen above, it is possible to evaluate code in a local scope and to change
+the values of variables in it.
+It is however not possible to define new variables in a local scope,
+so the expression passed to `debug_eval` will be evaluated as if it
+were inside a `let` block in the given scope.
 
 Custom Traps
 ------------

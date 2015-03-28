@@ -15,7 +15,7 @@ export instrument, graft, @localscope
 type GetLocalScope; end
 macro localscope()
     code_analyzed_only(Node(GetLocalScope()),
-        "@localscope can only be used within @debug")
+        "@localscope can only be used within @debug or @debug_analyze")
 end
 
 
