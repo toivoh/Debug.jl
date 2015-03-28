@@ -6,7 +6,7 @@
 module Analysis
 using Debug.AST, Debug.Meta
 
-export analyze
+export analyze, code_analyzed_only
 
 
 # ---- Helpers ----------------------------------------------------------------
@@ -19,6 +19,14 @@ is_file_linenumber(ex)            = is_expr(ex, :line, 2)
 
 get_linenumber(ex::Ex)             = argof(ex,1)
 get_linenumber(ex::LineNumberNode) = ex.line
+
+
+# ---- code_analyzed_only: wrap nodes that are only allowed in analyzed code --
+
+analyzed_only(ex, error_message) = error(error_message)
+function code_analyzed_only(ex, error_message)
+    :( $analyzed_only($(quot(ex)), $(quot(error_message))) )
+end
 
 
 # ---- wrap(): add scoping info to AST ------------------------------------
@@ -166,9 +174,12 @@ end
 
 function decorate(state::SimpleState, ex::Ex)
     head, args  = headof(ex), argsof(ex)
-    if head === :line;                     return Loc(ex, args...)
+    if head === :line;             return Loc(ex, args...)
     elseif head in [:quote, :top]; return Plain(ex)
-    elseif head === :macrocall; return decorate(state, macroexpand(ex))
+    elseif head === :macrocall;    return decorate(state, macroexpand(ex))
+    elseif head === :call && length(args) === 3 && args[1] === analyzed_only
+        # Detect calls to analyzed_only and substitute with its first argument
+        return decorate(state, (args[2]::QuoteNode).value)
     end
 
     decorate(argstates(state, ex), ex)

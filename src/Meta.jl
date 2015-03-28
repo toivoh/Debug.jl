@@ -13,7 +13,7 @@ export headof, argsof, argof, nargsof
 typealias Ex Union(Expr, ExNode)
 
 
-quot(ex) = Expr(:quote, ex)
+quot(ex) = QuoteNode(ex)
 
 is_expr(ex::Ex, head)          = headof(ex) === head
 is_expr(ex::Ex, heads::Set)    = headof(ex) in heads

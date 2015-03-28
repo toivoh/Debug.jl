@@ -5,7 +5,7 @@
 
 module Runtime
 using Debug.AST, Debug.Meta
-import Base: haskey, isequal, getindex, setindex!
+import Base: haskey, isequal, getindex, setindex!, keys
 export Scope, ModuleScope, LocalScope, getter, setter, get_eval
 export Frame, parent_frame, enclosing_scope_frame, scope_frameof
 
@@ -37,6 +37,10 @@ setindex!(scope::LocalScope, x,  sym::Symbol) = setter(scope, sym)(x)
 
 get_eval(scope::ModuleScope) = scope.eval
 get_eval(scope::LocalScope)  = get_eval(scope.parent)
+
+keys(scope::Scope) = getkeys!(Set{Symbol}(), scope)
+getkeys!(syms::Set{Symbol}, scope::ModuleScope) = syms
+getkeys!(syms::Set{Symbol}, scope::LocalScope)  = union!(syms, keys(scope.syms))
 
 
 # ---- Frame: Runtime node instance -------------------------------------------

@@ -7,7 +7,16 @@
 module Graft
 using Debug.AST, Debug.Meta, Debug.Analysis, Debug.Runtime
 import Debug.Meta
-export instrument, graft
+export instrument, graft, @localscope
+
+
+# ---- @localscope: returns the Scope instance for the local scope ------------
+
+type GetLocalScope; end
+macro localscope()
+    code_analyzed_only(Node(GetLocalScope()),
+        "@localscope can only be used within @debug")
+end
 
 
 # ---- instrument -------------------------------------------------------------
@@ -79,6 +88,7 @@ function instrument_node(c::Context, node::Node)
 end
 
 instrument_args(c::Context, node::Node) = exof(node)
+instrument_args(c::Context, ::Node{GetLocalScope}) = c.scope_ex
 function instrument_args(c::Context, node::ExNode)
     args = Any[]
     if isblocknode(node)
