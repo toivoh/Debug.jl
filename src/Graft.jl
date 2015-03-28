@@ -28,7 +28,13 @@ type Context
     env::Env
     scope_ex
 end
-Context(c::Context,e::Env,scope_ex) = Context(c.trap_pred,c.trap_ex,e,scope_ex)
+Context(c::Context,e::Env) = Context(c.trap_pred,c.trap_ex,e,nothing)
+
+function get_scope_ex(c::Context)
+    # Generate a gensym on demand; if c.scope_ex is never used
+    # it remains nothing
+    c.scope_ex === nothing ? c.scope_ex = gensym("scope") : c.scope_ex
+end
 
 function instrument(trap_pred::Function, trap_ex, ex)
     @gensym scope    
@@ -55,7 +61,7 @@ function code_scope(scopesym::Symbol, parent, env::Env, syms)
 end
 
 
-code_trap(c::Context, node) = Expr(:call, c.trap_ex, quot(node), c.scope_ex)
+code_trap(c::Context, node) = Expr(:call, c.trap_ex, quot(node), get_scope_ex(c))
 code_trap_if(c::Context,node) = c.trap_pred(node) ? code_trap(c,node) : nothing
 
 function instrument(c::Context, node::Node)
@@ -88,23 +94,28 @@ function instrument_node(c::Context, node::Node)
 end
 
 instrument_args(c::Context, node::Node) = exof(node)
-instrument_args(c::Context, ::Node{GetLocalScope}) = c.scope_ex
+instrument_args(c::Context, ::Node{GetLocalScope}) = get_scope_ex(c)
 function instrument_args(c::Context, node::ExNode)
     args = Any[]
-    if isblocknode(node)
-        if !is(envof(node), c.env)
+    orig_c = c
+    if isblocknode(node) && !is(envof(node), c.env)
+        # node introduces a scope, see if we need to reify it
+        c = Context(c, envof(node))
+        node.introduces_scope = true
+
+        for arg in argsof(node); push!(args, instrument(c, arg)); end
+
+        if c.scope_ex !== nothing
             # create new Scope
             syms, e = Set{Symbol}(), envof(node)
-            while !is(e, c.env);  union!(syms, e.defined); e = e.parent  end
-            
-            name = gensym("scope")
-            push!(args, code_scope(name, c.scope_ex, envof(node), syms))
-            c = Context(c, envof(node), name)
+            while !is(e, orig_c.env);  union!(syms, e.defined); e = e.parent  end
 
-            node.introduces_scope = true
+            unshift!(args, code_scope(c.scope_ex, get_scope_ex(orig_c), envof(node), syms))
         end
+    else
+        for arg in argsof(node); push!(args, instrument(c, arg)); end        
     end
-    for arg in argsof(node); push!(args, instrument(c, arg)); end
+
     Expr(headof(node), args...)
 end
 
