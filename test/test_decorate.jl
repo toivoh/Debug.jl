@@ -84,8 +84,8 @@ end
 
 @test_decorate let
     @syms [f]
-    function f(z, x::Int=1; a=3)
-        @syms z x a [y]
+    function f(z, x::Int=1; a=3, b=4, c=5)
+        @syms z x a b c [y]
         y = 0
     end
 end
