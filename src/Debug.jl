@@ -13,7 +13,7 @@ using Debug.AST, Debug.Meta, Debug.Analysis, Debug.Graft, Debug.Eval
 using Debug.Flow, Debug.UI
 
 # It seems that @instrument has to be exported in order not to be deleted
-export @debug, @bp, @instrument, @localscope, debug_eval
+export @debug, @bp, @instrument, @localscope, debug_eval, @debug_analyze
 
 is_trap(::Event)    = false
 is_trap(::LocNode)  = false
@@ -21,6 +21,10 @@ is_trap(node::Node) = isblocknode(parentof(node))
 
 macro debug(ex)
     code_debug(UI.instrument(ex))
+end
+never_trap(ex) = false
+macro debug_analyze(ex)
+    code_debug(instrument(never_trap, nothing, ex))
 end
 macro instrument(trap_ex, ex)
     @gensym trap_var
