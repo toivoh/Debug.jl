@@ -40,7 +40,9 @@ get_eval(scope::LocalScope)  = get_eval(scope.parent)
 
 keys(scope::Scope) = getkeys!(Set{Symbol}(), scope)
 getkeys!(syms::Set{Symbol}, scope::ModuleScope) = syms
-getkeys!(syms::Set{Symbol}, scope::LocalScope)  = union!(syms, keys(scope.syms))
+function getkeys!(syms::Set{Symbol}, scope::LocalScope)
+    union!(getkeys!(syms, scope.parent), keys(scope.syms))
+end
 
 
 # ---- Frame: Runtime node instance -------------------------------------------
