@@ -14,6 +14,8 @@ end
     (let y = -5, w = 4; y = -5; @localscope; end), @localscope
 end
 
+const a = 52
+
 for func in [f, g]
     global z = 5
 
@@ -33,6 +35,15 @@ for func in [f, g]
     symso, symsi = Set(keys(so)), Set(keys(si))
     @test symso == Set([:x, :y])
     @test symsi == Set([:x, :y, :w])
+
+    @test debug_eval(si, :a) === a
+    # the scope only looks up local variables through indexing
+    @test_throws ErrorException si[:a]
 end
+
+@debug_analyze scope = @localscope
+@test debug_eval(scope, :a) === a
+# the scope only looks up local variables through indexing
+@test_throws ErrorException scope[:a]
 
 end # module

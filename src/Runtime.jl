@@ -26,14 +26,15 @@ end
 haskey(s::ModuleScope, sym::Symbol) = false
 haskey(s::LocalScope,  sym::Symbol) = haskey(s.syms, sym) || haskey(s.parent, sym)
 
+get_entry(scope::ModuleScope, sym::Symbol) = error("No local variable `$sym` found in scope")
 function get_entry(scope::LocalScope, sym::Symbol)
     haskey(scope.syms, sym) ? scope.syms[sym] : get_entry(scope.parent, sym)
 end
 
-getter(scope::LocalScope, sym::Symbol) = get_entry( scope, sym)[1]
-setter(scope::LocalScope, sym::Symbol) = get_entry( scope, sym)[2]
-getindex(scope::LocalScope, sym::Symbol) = getter(scope,sym)()
-setindex!(scope::LocalScope, x,  sym::Symbol) = setter(scope, sym)(x)
+getter(scope::Scope, sym::Symbol) = get_entry( scope, sym)[1]
+setter(scope::Scope, sym::Symbol) = get_entry( scope, sym)[2]
+getindex(scope::Scope, sym::Symbol) = getter(scope,sym)()
+setindex!(scope::Scope, x,  sym::Symbol) = setter(scope, sym)(x)
 
 get_eval(scope::ModuleScope) = scope.eval
 get_eval(scope::LocalScope)  = get_eval(scope.parent)
