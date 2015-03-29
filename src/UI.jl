@@ -60,6 +60,7 @@ function trap(node, scope::Scope)
         print_context(ndfile, ndline, 1)
         print("\ndebug:", ndline, "> "); #flush(STDOUT)
         while true
+            if eof(STDIN); error("interrupted"); end
             cmd = chomp(readline(STDIN))
             if cmd == "s";     break
             elseif cmd == "n"; stepover!(state); break
