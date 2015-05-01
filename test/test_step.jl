@@ -24,7 +24,7 @@ macro test_step(ex)
     Debug.code_debug(Flow.instrument(trap, ex))
 end
 
-const instructions = {
+const instructions = Any[
     (1, stepover!),
     (2, singlestep!), (3, singlestep!), (4, singlestep!),
     (6, stepover!), (9, stepover!),
@@ -41,7 +41,7 @@ const instructions = {
     (42, stepover!),
     (43, singlestep!), (39, stepout!),
     (44, continue!),
-}
+]
 
 @test_step let
     @bp         #  1

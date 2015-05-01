@@ -56,7 +56,7 @@ end
     @assert q == 8
     
     # test assignment to ref in graft (don't rewrite)
-    a = [1:5]
+    a = [1:5;]
     @graft a[2]  = 45
     @graft a[3] += 1
     @assert isequal(a, [1,45,4,4,5])
