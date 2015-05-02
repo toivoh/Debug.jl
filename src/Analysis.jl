@@ -5,6 +5,7 @@
 
 module Analysis
 using Debug.AST, Debug.Meta
+using Compat
 
 export analyze, code_analyzed_only
 
@@ -33,7 +34,7 @@ end
 # Rewrites AST, exchanging Expr:s and leaves for Node:s.
 # Adds scope info, classifies nodes, etc.
 
-# TypeEnv: Env used in a type block to throw away non-method definitions 
+# TypeEnv: Env used in a type block to throw away non-method definitions
 type TypeEnv <: Env
     env::LocalEnv
 end
@@ -44,7 +45,7 @@ raw(s::State) = s
 raw{T<:SimpleState}(s::T) = T(raw(s.env))
 
 
-function wrap(states::Vector, args::Vector) 
+function wrap(states::Vector, args::Vector)
     [wrap(s, arg) for (s, arg) in zip(states, args)]
 end
 wrap(s::SimpleState, ex::SymbolNode) = wrap(s, ex.name)
@@ -84,7 +85,7 @@ decorate(s::SimpleState, ex::Symbol) = ex
 decorate(::Nonsyntax, ex::Ex) = Plain(ex)
 
 # Sig: (part of) function signature in function f(x) ... / f(x) = ...
-type Sig <: State; 
+type Sig <: State;
     s::SimpleState;  # state with outer Env, to define/assign f
     inner::Env;      # Env inside the method
 end
@@ -105,11 +106,11 @@ end
 AST.envof(s::SplitState) = s.env
 decorate(s::SplitState, ex::Ex) = decorate(s.argstates, ex)
 
-const updating_ops = {
+const updating_ops = @compat Dict(
  :+= => :+,   :-= => :-,  :*= => :*,  :/= => :/,  ://= => ://, :.//= => :.//,
 :.*= => :.*, :./= => :./, :\= => :\, :.\= => :.\,  :^= => :^,   :.^= => :.^,
  :%= => :%,   :|= => :|,  :&= => :&,  :$= => :$,  :<<= => :<<,  :>>= => :>>,
- :>>>= => :>>>}
+ :>>>= => :>>>)
 
 # return a Vector of visit states for each arg of an expr(head, args)
 function argstates(state::SimpleState, ex)
@@ -125,12 +126,12 @@ function argstates(state::SimpleState, ex)
         [(isa(state,Def) ? state : Rhs(e)), Rhs(e)]
     elseif head === :parameters
         fill(isa(state,Def) ? state : Rhs(e), nargs)
-        
+
     elseif head in [:global, :local]; fill(Def(e), nargs)
     elseif head === :while;              [Rhs(e),        Rhs(child(ex, e))]
     elseif head === :try
         cc = child(ex,e); states = [Rhs(child(ex,e)), Def(cc),Rhs(cc)]
-        nargs === 4 ? [states, Rhs(child(ex,e))] : states
+        nargs === 4 ? [states; Rhs(child(ex,e))] : states
     elseif head === :for
         if is_expr(args[1], :block)
             last_c = e
@@ -147,11 +148,11 @@ function argstates(state::SimpleState, ex)
         else
             c = child(ex, e); [SplitDef(c,e), Rhs(c)]
         end
-    elseif head in [:let, untyped_comprehensions]; c = child(ex, e); 
-        [Rhs(c), fill(SplitDef(c,e), nargs-1)...]
+    elseif head in [:let; untyped_comprehensions]; c = child(ex, e);
+        [Rhs(c); fill(SplitDef(c,e), nargs-1)...]
     elseif head in typed_comprehensions; c = child(ex, e)
-        [Rhs(e), Rhs(c), fill(SplitDef(c,e), nargs-2)...]
-        
+        [Rhs(e); Rhs(c); fill(SplitDef(c,e), nargs-2)...]
+
     elseif haskey(updating_ops, head); [Lhs(e), Rhs(e)]
     elseif head === :(=);   [(isa(state,Def) ? state : Lhs(e)), Rhs(e)]
     elseif head === :(<:);  [(isa(state,Def) ? state : Rhs(e)), Rhs(e)]
@@ -196,7 +197,7 @@ function set_source!(ex::ExNode, locex, line, file)
     ex.loc = Loc(locex, line, file)
     locex  = nothing
     for arg in argsof(ex)
-        if isa(arg, LocNode) 
+        if isa(arg, LocNode)
             line = arg.loc.line #valueof(arg).line
             if arg.loc.file != empty_symbol;  file = arg.loc.file;  end
         end

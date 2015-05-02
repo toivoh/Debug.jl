@@ -8,6 +8,7 @@ module Graft
 using Debug.AST, Debug.Meta, Debug.Analysis, Debug.Runtime
 import Debug.Meta
 export instrument, graft, @localscope
+using Compat
 
 
 # ---- @localscope: returns the Scope instance for the local scope ------------
@@ -55,7 +56,7 @@ function code_scope(scopesym::Symbol, parent, env::Env, syms)
     :(local $scopesym = $(quot(LocalScope))(
         $parent, 
         $(Expr(:typed_dict,
-               :($(quot(Symbol))=>$(quot((Function,Function)))), pairs...)),
+               :($(quot(Symbol))=>$(quot(@compat(Tuple{Function,Function})))), pairs...)),
         $(quot(env))
     ))
 end

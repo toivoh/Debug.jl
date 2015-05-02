@@ -34,7 +34,7 @@ macro test_enterleave(ex)
     Debug.code_debug(Debug.Graft.instrument(is_trap, trap, ex))
 end
 
-answers = {
+answers = Any[
     :while, (Enter,:while), (Leave,:while),
     :(=),
     :while,(Enter,:while),:+=,:call,1,:+=,:call,2,:+=,:call,3,(Leave,:while),
@@ -48,7 +48,7 @@ answers = {
     (Leave,:comprehension), [12,13],
     :function,
     :call, (Enter,:function), :call, 9, :call, (Leave,:function), 81
-}
+]
 
 @test_enterleave begin
     while false
