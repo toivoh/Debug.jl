@@ -6,9 +6,9 @@
 
 module Graft
 using Debug.AST, Debug.Meta, Debug.Analysis, Debug.Runtime
-import Debug.Meta
-export instrument, graft, @localscope
 using Compat
+import Debug.Meta, Debug.AST.is_emittable
+export instrument, graft, @localscope, @notrap
 
 
 # ---- @localscope: returns the Scope instance for the local scope ------------
@@ -17,6 +17,18 @@ type GetLocalScope; end
 macro localscope()
     code_analyzed_only(Node(GetLocalScope()),
         "@localscope can only be used within @debug or @debug_analyze")
+end
+
+
+# ---- @notrap: prevents generation of traps in the wrapped code --------------
+
+type NoTrap; end
+is_emittable(::Node{NoTrap}) = false
+macro notrap(ex)
+    # Avoid creating any line number nodes so that the resulting block has
+    # exactly two arguments, with Node(NoTrap()) being the first, 
+    # as expected below
+    esc(Expr(:block, Node(NoTrap()), ex))
 end
 
 
@@ -30,6 +42,7 @@ type Context
     scope_ex
 end
 Context(c::Context,e::Env) = Context(c.trap_pred,c.trap_ex,e,nothing)
+Context(c::Context) = Context(c, c.env)
 
 function get_scope_ex(c::Context)
     # Generate a gensym on demand; if c.scope_ex is never used
@@ -94,11 +107,20 @@ function instrument_node(c::Context, node::Node)
     end
 end
 
+never_trap(ex) = false
+
 instrument_args(c::Context, node::Node) = exof(node)
 instrument_args(c::Context, ::Node{GetLocalScope}) = get_scope_ex(c)
 function instrument_args(c::Context, node::ExNode)
     args = Any[]
     orig_c = c
+
+    if isblocknode(node) && nargsof(node) == 2 && isa(argof(node, 1), Node{NoTrap})
+        c = Context(c)
+        c.trap_pred = never_trap
+        return instrument(c, argof(node, 2))
+    end
+
     if isblocknode(node) && !is(envof(node), c.env)
         # node introduces a scope, see if we need to reify it
         c = Context(c, envof(node))

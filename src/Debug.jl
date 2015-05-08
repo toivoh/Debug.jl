@@ -13,7 +13,7 @@ using Debug.AST, Debug.Meta, Debug.Analysis, Debug.Graft, Debug.Eval
 using Debug.Flow, Debug.UI
 
 # It seems that @instrument has to be exported in order not to be deleted
-export @debug, @bp, @instrument, @localscope, debug_eval, @debug_analyze
+export @debug, @bp, @instrument, @localscope, debug_eval, @debug_analyze, @notrap
 
 is_trap(::Event)    = false
 is_trap(::LocNode)  = false
