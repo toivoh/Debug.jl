@@ -9,7 +9,7 @@ using Debug
     (let y = -5, w = 4; y = -5; @localscope; end), @localscope
 end
 
-@debug_analyze function g(x)
+@debug @notrap function g(x)
     y = x+3
     (let y = -5, w = 4; y = -5; @localscope; end), @localscope
 end
@@ -41,7 +41,7 @@ for func in [f, g]
     @test_throws ErrorException si[:a]
 end
 
-@debug_analyze scope = @localscope
+@debug @notrap scope = @localscope
 @test debug_eval(scope, :a) === a
 # the scope only looks up local variables through indexing
 @test_throws ErrorException scope[:a]

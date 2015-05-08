@@ -25,4 +25,16 @@ end
 
 f(3)
 
+
+errtrap(node, scope) = @assert false
+@instrument trap @notrap begin; @bp; x=1; end
+
+# #71
+@debug begin
+   serialize(IOBuffer(), @notrap ()->1)
+end
+
+@notrap z=5
+@assert z == 5
+
 end

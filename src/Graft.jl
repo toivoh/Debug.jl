@@ -42,7 +42,6 @@ type Context
     scope_ex
 end
 Context(c::Context,e::Env) = Context(c.trap_pred,c.trap_ex,e,nothing)
-Context(c::Context) = Context(c, c.env)
 
 function get_scope_ex(c::Context)
     # Generate a gensym on demand; if c.scope_ex is never used
@@ -80,8 +79,7 @@ code_trap_if(c::Context,node) = c.trap_pred(node) ? code_trap(c,node) : nothing
 
 function instrument(c::Context, node::Node)
     if isa(node.state, Rhs) && !is_in_type(node) && c.trap_pred(node)
-        Expr(:block, code_trap(c, node), 
-             is_emittable(node) ? instrument_node(c, node) : quot(nothing))
+        Expr(:block, code_trap(c, node), instrument_node(c, node))
     else
         instrument_node(c, node)
     end
@@ -93,6 +91,7 @@ code_enterleave(::Nothing, ex, leave) = :(try         $ex; finally $leave; end)
 code_enterleave(enter,     ex, leave) = :(try $enter; $ex; finally $leave; end)
 
 function instrument_node(c::Context, node::Node)
+    if !is_emittable(node); return quot(nothing); end
     ex = instrument_args(c, node)
     if is_scope_node(node)
         enter, leave = code_trap_if(c,Enter(node)), code_trap_if(c,Leave(node))
@@ -115,10 +114,12 @@ function instrument_args(c::Context, node::ExNode)
     args = Any[]
     orig_c = c
 
+    # Detect @notrap 
     if isblocknode(node) && nargsof(node) == 2 && isa(argof(node, 1), Node{NoTrap})
-        c = Context(c)
-        c.trap_pred = never_trap
-        return instrument(c, argof(node, 2))
+        old_trap, c.trap_pred = c.trap_pred, never_trap
+        result = instrument(c, argof(node, 2))
+        c.trap_pred = old_trap
+        return result
     end
 
     if isblocknode(node) && !is(envof(node), c.env)
