@@ -5,7 +5,7 @@
 
 module Runtime
 using Debug.AST, Debug.Meta
-import Base: haskey, isequal, getindex, setindex!, keys
+import Base: haskey, isequal, getindex, setindex!, keys, ==
 export Scope, ModuleScope, LocalScope, getter, setter, get_eval
 export Frame, parent_frame, enclosing_scope_frame, scope_frameof
 

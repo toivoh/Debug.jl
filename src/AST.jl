@@ -4,7 +4,7 @@
 # Extensions to the julia AST format shared by decorate, instrument, and graft
 
 module AST
-import Base.haskey, Base.show, Base.isequal, Base.promote_rule
+import Base.haskey, Base.show, Base.isequal, Base.promote_rule, Base.==
 
 export Env, LocalEnv, NoEnv, child
 export State, SimpleState, Def, Lhs, Rhs, Nonsyntax
@@ -28,7 +28,7 @@ type LocalEnv <: Env
 end
 child(source, env::Env) = LocalEnv(source, env, Set{Symbol}(), Set{Symbol}())
 
-function show(io::IO, env::LocalEnv) 
+function show(io::IO, env::LocalEnv)
     print(io, "LocalEnv(,$(env.parent),$(env.defined),$(env.assigned))")
 end
 
@@ -68,13 +68,13 @@ type Node{T}
     parent::Union(Node, Nothing)
     introduces_scope::Bool
     state::State
-    loc::Loc    
-    
+    loc::Loc
+
     function adopt_args!{T}(node::Node{T})
         if T <: ExValue
             for arg in node.value.args
                 set_parent(arg, node)
-            end            
+            end
         end
         node
     end
