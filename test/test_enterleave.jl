@@ -1,11 +1,11 @@
 module TestTrap
 import Debug
-using Debug, Debug.AST, Debug.Meta
+using Compat, Debug, Debug.AST, Debug.Meta
 import Debug.Node, Debug.Scope
 
 is_trap(::Node) = false
 is_trap(node::ExNode) = isblocknode(parentof(node))
-is_trap(::Union(Event)) = true
+is_trap(::@compat(Union{Event})) = true
 
 ip = 1
 
@@ -20,7 +20,7 @@ function trap(node::ExNode, s::Scope)
     global ip
 #    println(headof(node))
     @assert answers[ip] == headof(node)
-    ip += 1    
+    ip += 1
 end
 function output(x)
     global ip
@@ -38,13 +38,13 @@ answers = Any[
     :while, (Enter,:while), (Leave,:while),
     :(=),
     :while,(Enter,:while),:+=,:call,1,:+=,:call,2,:+=,:call,3,(Leave,:while),
-    :try, (Enter,:try), 
-        :while, (Enter,:while), (Leave,:while), :call, "try", 
+    :try, (Enter,:try),
+        :while, (Enter,:while), (Leave,:while), :call, "try",
     (Leave,:try),
     :for, (Enter,:for), :call, 2, :call, 3, :call, 4, (Leave,:for),
     :call, (Enter,:let), :call, 5, (Leave,:let), 5,
-    :call, (Enter,:comprehension), 
-        :call, 12, :call, 13, 
+    :call, (Enter,:comprehension),
+        :call, 12, :call, 13,
     (Leave,:comprehension), [12,13],
     :function,
     :call, (Enter,:function), :call, 9, :call, (Leave,:function), 81
@@ -63,12 +63,12 @@ answers = Any[
         while false
         end
         output("try")
-    end    
+    end
 
     for x=2:4
         output(x)
     end
-    
+
     output(let x=5
         output(x)
         x

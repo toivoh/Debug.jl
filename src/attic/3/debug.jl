@@ -65,7 +65,7 @@ type Block      <: Head; end
 type Leaf{T}    <: Head;  value::T;      end
 type LineNumber <: Head
     line::Int
-    file::String
+    file::AbstractString
     ex
 end
 #is_expr(node::Node{Exp}, head::Symbol) = node.head.head == head
@@ -77,8 +77,8 @@ toAST(head::LineNumber)  = head.ex
 
 
 translate(ex) = translate("", ex)
-translate(file::String, ex) = Node(Leaf(ex))
-function translate(file::String, ex::Expr)
+translate(file::AbstractString, ex) = Node(Leaf(ex))
+function translate(file::AbstractString, ex::Expr)
     head, args = ex.head, ex.args
     if is_expr(ex, :block)
         Node(Block(), { begin

@@ -26,7 +26,7 @@ type NoTrap; end
 is_emittable(::Node{NoTrap}) = false
 macro notrap(ex)
     # Avoid creating any line number nodes so that the resulting block has
-    # exactly two arguments, with Node(NoTrap()) being the first, 
+    # exactly two arguments, with Node(NoTrap()) being the first,
     # as expected below
     esc(Expr(:block, Node(NoTrap()), ex))
 end
@@ -50,7 +50,7 @@ function get_scope_ex(c::Context)
 end
 
 function instrument(trap_pred::Function, trap_ex, ex)
-    @gensym scope    
+    @gensym scope
     ex = instrument(Context(trap_pred,trap_ex,NoEnv(),scope), analyze(ex,true))
     quote
         $scope = $(quot(ModuleScope))(eval)
@@ -66,7 +66,7 @@ end
 function code_scope(scopesym::Symbol, parent, env::Env, syms)
     pairs = [Expr(:(=>), quot(sym), code_getset(sym)) for sym in syms]
     :(local $scopesym = $(quot(LocalScope))(
-        $parent, 
+        $parent,
         $(Expr(:typed_dict,
                :($(quot(Symbol))=>$(quot(@compat(Tuple{Function,Function})))), pairs...)),
         $(quot(env))
@@ -85,9 +85,15 @@ function instrument(c::Context, node::Node)
     end
 end
 
-code_enterleave(::Nothing, ex, ::Nothing) = ex
-code_enterleave(enter,     ex, ::Nothing) = quote; $enter; $ex; end
-code_enterleave(::Nothing, ex, leave) = :(try         $ex; finally $leave; end)
+if VERSION >= v"0.4.0-dev"
+    code_enterleave(::Void, ex, ::Void) = ex
+    code_enterleave(enter,  ex, ::Void) = quote; $enter; $ex; end
+    code_enterleave(::Void, ex, leave) = :(try $ex; finally $leave; end)
+else
+    code_enterleave(::Nothing, ex, ::Nothing) = ex
+    code_enterleave(enter,     ex, ::Nothing) = quote; $enter; $ex; end
+    code_enterleave(::Nothing, ex, leave) = :(try $ex; finally $leave; end)
+end
 code_enterleave(enter,     ex, leave) = :(try $enter; $ex; finally $leave; end)
 
 function instrument_node(c::Context, node::Node)
@@ -114,7 +120,7 @@ function instrument_args(c::Context, node::ExNode)
     args = Any[]
     orig_c = c
 
-    # Detect @notrap 
+    # Detect @notrap
     if isblocknode(node) && nargsof(node) == 2 && isa(argof(node, 1), Node{NoTrap})
         old_trap, c.trap_pred = c.trap_pred, never_trap
         result = instrument(c, argof(node, 2))
@@ -137,7 +143,7 @@ function instrument_args(c::Context, node::ExNode)
             unshift!(args, code_scope(c.scope_ex, get_scope_ex(orig_c), envof(node), syms))
         end
     else
-        for arg in argsof(node); push!(args, instrument(c, arg)); end        
+        for arg in argsof(node); push!(args, instrument(c, arg)); end
     end
 
     Expr(headof(node), args...)
@@ -146,8 +152,8 @@ end
 
 # ---- graft ------------------------------------------------------------------
 # Rewrite an (analyzed) AST to work as if it were inside
-# the given scope, when evaluated in global scope. 
-# Replaces reads and writes to variables from that scope 
+# the given scope, when evaluated in global scope.
+# Replaces reads and writes to variables from that scope
 # with getter/setter calls.
 
 graft(env::Env, scope::Scope, ex) = rawgraft(scope, analyze(env, ex, false))
@@ -177,13 +183,13 @@ function rawgraft(s::LocalScope, ex::Ex)
                  :($tup  = $rhs    ),
                 [:($dest = $tup[$k]) for (k,dest)=enumerate(argsof(lhs))]...))
         elseif is_expr(lhs, [:ref, :.]) || isa(lhs, PLeaf)# need no lhs rewrite
-        else error("graft: not implemented: $ex")       
-        end  
+        else error("graft: not implemented: $ex")
+        end
     elseif haskey(Analysis.updating_ops, head) && isa(args[1], SymNode)
         # x+=y ==> x=x+y etc.
         op = Analysis.updating_ops[head]
         return rawgraft(s, :( $(args[1]) = ($op)($(args[1]), $(args[2])) ))
-    end        
+    end
     Expr(head, [rawgraft(s,arg) for arg in args]...)
 end
 

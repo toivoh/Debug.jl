@@ -223,7 +223,7 @@ function postprocess_env!(envs::Set{LocalEnv}, env::LocalEnv)
     if env in envs; return; end
     push!(envs, env)
     p = env.parent
-    p_assigned = isa(p, LocalEnv) ? p.assigned : Set{None}()
+    p_assigned = isa(p, LocalEnv) ? p.assigned : Set{@compat(Union{})}()
     env.defined  = union(env.defined, setdiff(env.assigned, p_assigned))
     env.assigned = union(env.defined, p_assigned)
 end

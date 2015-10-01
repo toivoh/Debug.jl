@@ -4,6 +4,7 @@
 # Extensions to the julia AST format shared by decorate, instrument, and graft
 
 module AST
+using Compat
 import Base.haskey, Base.show, Base.isequal, Base.promote_rule, Base.==
 
 export Env, LocalEnv, NoEnv, child
@@ -63,9 +64,10 @@ const empty_symbol = symbol("")
 type Loc;   ex; line::Int; file::Symbol;  end
 Loc(ex, line)       = Loc(ex, line, empty_symbol)
 
-type Node{T}
+parent_type = VERSION >= v"0.4.0-dev" ? :(Union{Node,Void}) : :(Union(Node,Nothing))
+@eval type Node{T}
     value::T
-    parent::Union(Node, Nothing)
+    parent::$parent_type
     introduces_scope::Bool
     state::State
     loc::Loc
@@ -127,7 +129,7 @@ envof(   node::Node) = envof(node.state) # will only work State:s with envof
 exof(node::SymNode) = valueof(node)
 exof(node::LocNode) = node.loc.ex
 exof(node::Node)    = exof(valueof(node))
-exof(value::Union(Plain, Loc)) = value.ex
+exof(value::@compat(Union{Plain, Loc})) = value.ex
 
 
 # ---- Events -----------------------------------------------------------------

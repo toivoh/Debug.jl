@@ -1,6 +1,6 @@
 module TestDecorate
 export @syms, @noenv, @test_decorate
-using Debug.AST, Debug.Meta, Debug.Analysis
+using Compat, Debug.AST, Debug.Meta, Debug.Analysis
 
 macro assert_fails(ex)
     quote
@@ -30,7 +30,7 @@ macro noenv()
     Node(NoEnv())
 end
 
-rebuild(node::Union(Node{BlockEnv},Node{NoEnv})) = node
+rebuild(node::@compat(Union{Node{BlockEnv},Node{NoEnv}})) = node
 function rebuild(node::Node)
     if isblocknode(node)
         env = envof(node)
@@ -121,8 +121,8 @@ end
     let
         @syms d1 d2 d3 d4 d5 [a1 a2 a3 a4 a5]
         # define
-        global d1, d2=3, d3::Int, d4::String = "foo"
-        local d5::Float64 = 3    
+        global d1, d2=3, d3::Int, d4::AbstractString = "foo"
+        local d5::Float64 = 3
         # assign
         a1 = 5
         a2, a3::Integer = 6, 7
@@ -270,7 +270,7 @@ end
     @syms T1 T2 T3
     abstract T1
     abstract T2 <: Q
-    typealias T3 T1    
+    typealias T3 T1
 end
 
 # type
@@ -315,7 +315,7 @@ end
 @test_decorate begin
     @noenv
     begin
-        @noenv        
+        @noenv
     end
     for x=(@noenv; 1:3)
         @syms x

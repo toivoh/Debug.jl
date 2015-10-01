@@ -225,7 +225,7 @@ end
 
 type Context
     line::Int
-    file::String
+    file::AbstractString
 end
 Context() = Context(0, "")
 

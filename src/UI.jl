@@ -16,11 +16,11 @@ end # module
 
 
 module UI
-using Debug.Meta, Debug.AST, Debug.Eval, Debug.Flow
+using Compat, Debug.Meta, Debug.AST, Debug.Eval, Debug.Flow
 import Debug.Session
 export trap
 
-const helptext = 
+const helptext =
 "Commands:
 --------
 h: display this help text
@@ -98,7 +98,7 @@ function interpolate(ex::Ex)
     end
 end
 
-function eval_in_scope(line::String, node, scope)
+function eval_in_scope(line::AbstractString, node, scope)
     try
         ex0 = parse(line)
         Session.eval(:( (n,s)=$(quot((node,scope))) ))
@@ -113,7 +113,7 @@ function eval_in_scope(line::String, node, scope)
     end
 end
 
-function print_context(path::String, line::Int, nsurr::Int)
+function print_context(path::AbstractString, line::Int, nsurr::Int)
     print("\nat ", path, ":", line, "\n")
     try
         src = readlines(open(string(path)))

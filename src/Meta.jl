@@ -4,13 +4,13 @@
 # Metaprogramming tools used throughout the Debug package
 
 module Meta
-using Debug.AST
+using Compat, Debug.AST
 export Ex, quot, is_expr
 export isblocknode, is_function, is_scope_node, is_in_type, introduces_scope
 export untyped_comprehensions, typed_comprehensions, comprehensions
 export headof, argsof, argof, nargsof
 
-typealias Ex Union(Expr, ExNode)
+typealias Ex @compat(Union{Expr, ExNode})
 
 
 quot(ex) = QuoteNode(ex)
@@ -29,7 +29,7 @@ is_function(node::Ex) = is_expr(node, [:function, :->], 2) ||
     (is_expr(node, :(=), 2) && is_expr(argof(node,1), :call))
 
 const untyped_comprehensions = [:comprehension, :dict_comprehension]
-const typed_comprehensions   = [:typed_comprehension, 
+const typed_comprehensions   = [:typed_comprehension,
                                 :typed_dict_comprehension]
 const comprehensions = [untyped_comprehensions; typed_comprehensions]
 
@@ -37,7 +37,11 @@ const scope_heads = Set([:while; :try; :for; :let; comprehensions...])
 is_scope_node(ex) = is_expr(ex, scope_heads) || is_function(ex)
 
 # only for Node/Nothing
-is_in_type(::Nothing) = false
+if VERSION >= v"0.4.0-dev"
+    is_in_type(::Void) = false
+else
+    is_in_type(::Nothing) = false
+end
 function is_in_type(node::Node)
     if isa(node.state, Rhs)
         isa(envof(node), LocalEnv) && is_expr(envof(node).source, :type)
