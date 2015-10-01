@@ -1,3 +1,4 @@
+isdefined(Main, :__precompile__) && __precompile__()
 
 module Debug
 
