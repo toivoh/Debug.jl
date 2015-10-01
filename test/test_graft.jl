@@ -1,7 +1,8 @@
 module TestGraft
 export @syms
 using Debug, Debug.AST, Debug.Eval
-import Debug.AST.is_emittable, Debug.@instrument, Debug.Meta.quot
+using Debug.Graft.instrument, Debug.is_trap, Debug.Meta.quot
+import Debug.AST.is_emittable
 export @test_graft
 
 macro assert_fails(ex)
@@ -26,11 +27,19 @@ function trap(g::Node{Plain}, scope::Scope)
     end
 end
 
+macro instrument_assume_global(trap_ex, ex)
+    @gensym trap_var
+    esc(quote
+        const $trap_var = $trap_ex
+        $(instrument(is_trap, trap_var, ex))
+    end)
+end
+
 macro graft(ex)
     quot(Node(Graft(ex)))
 end
 macro test_graft(ex)
-    :(@instrument trap $(esc(ex)))
+    :(@instrument_assume_global trap $(esc(ex)))
 end
 
 
