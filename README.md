@@ -159,6 +159,22 @@ Then, in the Julia terminal:
     
     julia> 
 
+Considerations for parallel code
+--------------------------------
+The `Debug` package has not been written with support for parallel execution in
+mind. The instrumentation code that is inserted by the `@debug` macro will
+likely not work as intended for code that is sent to another process, or run in
+another thread. It might also cause trouble for Julia's serialization code,
+since the instrumentation code contains references to data structures with
+cycles.
+
+For these reasons, it is recommended that if there is code inside of a
+`@debug` macro invocation that might be run in another thread or process to
+additionally wrap that code with the `@notrap` macro, and not use `Debug`
+features such as `@localscope` inside of it.
+This will ensure that no instrumentation is
+generated for the code in question and it will be passed through as is.
+Consequently, stepping through code wrapped in `@notrap` is not possible.
 
 Experimental Features
 ---------------------
@@ -205,16 +221,15 @@ uses of all local variables.
 The `Debug` package needs to be able to evaluate code in local scopes when it
 is entered at the debug prompt however; in fact this is the main functionality
 that the package provides, and can also be used as a standalone feature.
-To evaluation in a local scope, code is instrumented to create `Scope` objects,
-which contain getter and setter functions for each local variable accesible in
-a given scope.
+To allow evaluation in a local scope, code is instrumented to create `Scope` objects, which contain getter and setter functions for each local variable
+accesible in a given scope.
 
 Code wrapped inside the `@debug` macro can retrieve the current scope object
-using the `@localscope` macro. The `@debug_analyze` macro can be used instead
-of `@debug` to allow using `@localscope` with minimal code instrumentation,
-but does not allow stepping through the instrumented code. It only creates
-`Scope` objects when entering scopes where they will be needed by some nested
-`@localscope` invocation.
+using the `@localscope` macro. If minimal code instrumentation is desired,
+parts or all of the code wrapped in the `@debug` macro can be wrapped in the
+`@notrap` macro. The `@notrap` macro will disable stepping through the wrapped code, but will still allow the `@localscope` macro to be used.
+`Scope` objects will then only be created when entering scopes where they will
+be needed by some nested `@localscope` invocation.
 
 Once a `Scope` object is available, local variables can be read and assigned
 in it by indexing with the corresponding symbols, and listed using
@@ -222,7 +237,7 @@ in it by indexing with the corresponding symbols, and listed using
 `debug_eval` function:
 
     using Debug
-    @debug_analyze function f(x)
+    @debug @notrap function f(x)
         outer = @localscope
         local inner
         pos = "outer"
