@@ -36,18 +36,14 @@ macro instrument(trap_ex, ex)
 end
 
 function code_debug(ex)
-    globalvar = esc(gensym("globalvar"))
-    quote
-        $globalvar = false
-        try
-            global $globalvar
-            $globalvar = true
-        end
-        if !$globalvar
+    globalvar = gensym("globalvar")
+    esc(quote
+        $globalvar = nothing
+        if !isdefined($(quot(globalvar)))
             error("@debug: must be applied in global (i.e. module) scope!")
         end
-        $(esc(ex))
-    end
+        $ex
+    end)
 end
 
 end # module
